@@ -43,7 +43,7 @@ function uploadToImageInk($filePath) {
     ));
 
     // 执行 cURL 请求
-    $responseData = curl_exec($ch);
+    $jsonObject = curl_exec($ch);
 
     // 检查是否有错误发生
     if (curl_errno($ch)) {
@@ -53,19 +53,20 @@ function uploadToImageInk($filePath) {
     // 关闭 cURL 会话
     curl_close($ch);
 
+    // 处理图床返回的响应
+    $responseData = json_decode($jsonObject, true);
+
+//    stderr('第三方图床上传完成', '第三方图床上传完成, response: '.$responseData,false);
     // 检查状态码
     if ($responseData['code'] == 200) {
         // 上传成功
         $name = $responseData['data']['name'];
         $url = $responseData['data']['url'];
-
-        // 输出上传成功的信息
-        echo 'Upload successful:';
-        echo 'Name: ' . $name;
-        echo 'URL: ' . $url;
+         // 输出成功消息
+        stderr('第三方图床上传成功', 'Upload successful:'.'Name: ' . $name.'URL: ' . $url,false);
     } else {
-        // 上传失败
-        echo 'Upload failed. Error message: ' . $responseData['msg'];
+         // 上传失败
+        stderr('第三方图床上传失败', '第三方图床上传失败',false);
     }
 
 }
@@ -143,15 +144,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST")
 	else
 	$public='"1"';
 
-    // 上传至第三方图床
-    uploadToImageInk($url);
-
     //将文件信息插入数据库，并更新用户的头像信息。
 	sql_query("INSERT INTO bitbucket (owner, name, added, public) VALUES ({$CURUSER['id']}, $name, $added, $public)") or sqlerr(__FILE__, __LINE__);
 	sql_query("UPDATE users SET avatar = ".sqlesc($url)." WHERE id = {$CURUSER['id']}") or sqlerr(__FILE__, __LINE__);
 
     // 输出成功消息
-	stderr($lang_bitbucketupload['std_success'], $lang_bitbucketupload['std_use_following_url']."<br /><b><a href=\"$url\">$url</a></b><p><a href=bitbucket-upload.php>".$lang_bitbucketupload['std_upload_another_file']."</a>.<br /><br /><img src=\"$url\" border=0><br /><br />".$lang_bitbucketupload['std_image']. ($width=$newwidth && $height==$newheight ? $lang_bitbucketupload['std_need_not_rescaling']:$lang_bitbucketupload['std_rescaled_from']."$height x $width".$lang_bitbucketupload['std_to']."$newheight x $newwidth") .$lang_bitbucketupload['std_profile_updated'],false);
+//	stderr($lang_bitbucketupload['std_success'], $lang_bitbucketupload['std_use_following_url']."<br /><b><a href=\"$url\">$url</a></b><p><a href=bitbucket-upload.php>".$lang_bitbucketupload['std_upload_another_file']."</a>.<br /><br /><img src=\"$url\" border=0><br /><br />".$lang_bitbucketupload['std_image']. ($width=$newwidth && $height==$newheight ? $lang_bitbucketupload['std_need_not_rescaling']:$lang_bitbucketupload['std_rescaled_from']."$height x $width".$lang_bitbucketupload['std_to']."$newheight x $newwidth") .$lang_bitbucketupload['std_profile_updated'],false);
+
+    // 上传至第三方图床
+    uploadToImageInk($url);
+
 }
 //生成标准顶栏包括个人信息栏及以上的所有内容
 stdhead($lang_bitbucketupload['head_avatar_upload']);
