@@ -449,10 +449,37 @@ function languagetable($res, $frame_caption)
 	end_frame();
 }
 
+/*负责生成发种数量统计的table页面(仅生成表格和表格的标题)*/
+function seeders_table($res, $frame_caption)
+{
+    global $lang_topten;
+    // 标题名
+    begin_frame($frame_caption, true);
+    begin_table();
+    ?>
+    <!--列名-->
+    <tr>
+        <td class="colhead"><?php echo $lang_topten['col_rank'] ?></td>
+        <td class="colhead" align="left"> <?php echo $lang_topten['col_user'] ?> </td>
+        <td class="colhead"> <?php echo $lang_topten['col_uploaded'] ?> </td>
+    </tr>
+    <!--每一行数据-->
+    <?php
+    $num = 0;
+    while ($a = mysql_fetch_assoc($res))
+    {
+        ++$num;
+        print("<tr><td class=\"rowfollow\" align=\"center\">$num</td><td class=\"rowfollow\" align=\"left\">" . get_username($a["userid"]) .
+            "</td><td class=\"rowfollow\" align=\"right\">" . $a["seeds"] . "</td></tr>");
+    }
+    end_table();
+    end_frame();
+}
+
 stdhead($lang_topten['head_top_ten']);
 begin_main_frame();
 $type = isset($_GET["type"]) ? (int)$_GET["type"] : 0;
-if (!in_array($type,array(1,2,3,4,5,6,7)))
+if (!in_array($type,array(1,2,3,4,5,6,7,8)))
 $type = 1;
 $limit = isset($_GET["lim"]) ? (int)$_GET["lim"] : false;
 $subtype = isset($_GET["subtype"]) ? $_GET["subtype"] : false;
@@ -464,13 +491,14 @@ print("<p align=\"center\">"  .
 //($type == 4 && !$limit ? "<b>".$lang_topten['text_peers']."</b>" : "<a href=\"topten.php?type=4\">".$lang_topten['text_peers']."</a>")  . " | " .
 ($type == 5 && !$limit ? "<b>".$lang_topten['text_community']."</b>" : "<a href=\"topten.php?type=5\">".$lang_topten['text_community']."</a>")  . " | " .
 //($type == 7 && !$limit ? "<b>".$lang_topten['text_search']."</b>" : "<a href=\"topten.php?type=7\">".$lang_topten['text_search']."</a>")  . " | " .
-($type == 6 && !$limit ? "<b>".$lang_topten['text_other']."</b>" : "<a href=\"topten.php?type=6\">".$lang_topten['text_other']."</a>")  . "</p>\n");
+($type == 6 && !$limit ? "<b>".$lang_topten['text_other']."</b>" : "<a href=\"topten.php?type=6\">".$lang_topten['text_other']."</a>")  . " | " .
+($type == 8 && !$limit ? "<b>".'发种大赛'."</b>" : "<a href=\"topten.php?type=8\">".'发种大赛'."</a>")  . "</p>\n");
 
 if (!$limit || $limit > 250)
 $limit = 10;
 
 $cachename = "topten_type_".$type."_limit_".$limit."_subtype_".$subtype;
-$cachetime = 60 * 60; // 60 minutes
+$cachetime = 60 * 10; // 10 minutes
 // START CACHE
 $Cache->new_page($cachename, $cachetime, true);
 //no this option
@@ -750,6 +778,27 @@ elseif ($type == 7)	// search
 	}
 }
 */
+elseif ($type == 8) {
+    // 定义一个关联数组
+    $categoryMedia = array(
+        401 => '电影',
+        402 => '电视剧',
+        405 => '动漫',
+        404 => '纪录片',
+        403 => '综艺',
+        409 => '音乐',
+        406 => 'MV',
+        407 => '体育',
+        410 => '教育视频',
+        412 => '有声书',
+        411 => '电子书',
+        413 => '教育资料'
+    );
+    foreach ($categoryMedia as $categoryId => $categoryName) {
+        $mysqlResultCategory = sql_query("SELECT owner AS userid, COUNT(*) as seeds FROM torrents WHERE added > '2023-10-23 12:00:00' AND added < '2023-11-22 12:00:00' AND visible = 'yes' AND category = ".$categoryId."  GROUP BY owner ORDER BY seeds DESC LIMIT 50") or sqlerr();
+        seeders_table($mysqlResultCategory, "发种大赛期间，".$categoryName."区前50名发种者：");
+    }
+}
 	end_main_frame();
 	print("<p><font class=\"small\">".$lang_topten['text_this_page_last_updated'].date('Y-m-d H:i:s'). ", ".$lang_topten['text_started_recording_date'].$datefounded.$lang_topten['text_update_interval']."</font></p>");
 	$Cache->end_whole_row();
