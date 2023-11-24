@@ -11,13 +11,32 @@ function bonusarray($option = 0){
     global $lang_mybonus;
 
     $results = [];
+
+    //借款
+    $bonus = array();
+    $bonus['points'] = 1;// 加个
+    $bonus['art'] = 'loan'; // type
+    $bonus['menge'] = 0; // 1gb的字节数
+    $bonus['name'] = "申请贷款"; // text
+    $bonus['description'] = "在还款之前申请一笔贷款, 你只能申请一笔贷款";// text
+    $results[] = $bonus;
+
+    //还款
+    $bonus = array();
+    $bonus['points'] = 2;// 加个
+    $bonus['art'] = 'repayment'; // type
+    $bonus['menge'] = 0; // 1gb的字节数
+    $bonus['name'] = "还款"; // text
+    $bonus['description'] = "偿还你的上一笔贷款";// text
+    $results[] = $bonus;
+
     //1.0 GB Uploaded
     $bonus = array();
-    $bonus['points'] = $onegbupload_bonus;
-    $bonus['art'] = 'traffic';
-    $bonus['menge'] = 1073741824;
-    $bonus['name'] = $lang_mybonus['text_uploaded_one'];
-    $bonus['description'] = $lang_mybonus['text_uploaded_note'];
+    $bonus['points'] = $onegbupload_bonus;// 加个
+    $bonus['art'] = 'traffic'; // type
+    $bonus['menge'] = 1073741824; // 1gb的字节数
+    $bonus['name'] = $lang_mybonus['text_uploaded_one']; // text
+    $bonus['description'] = $lang_mybonus['text_uploaded_note'];// text
     $results[] = $bonus;
 
     //5.0 GB Uploaded
@@ -297,14 +316,20 @@ function bonusarray($option = 0){
 $allBonus = bonusarray();
 // 防止连发设置10s缓冲
 $lockSeconds = 10;
-
+// 系统限制 $lockSeconds 秒内只能点击交换按钮一次！
 $lockText = sprintf($lang_mybonus['lock_text'], $lockSeconds);
+// 如果不能点, 则输出系统报错对不起信息 魔力值系统当前处于关闭中 不过你的魔力值仍在计算中
 if ($bonus_tweak == "disable" || $bonus_tweak == "disablesave")
     stderr($lang_mybonus['std_sorry'],$lang_mybonus['std_karma_system_disabled'].($bonus_tweak == "disablesave" ? "<b>".$lang_mybonus['std_points_active']."</b>" : ""),false);
 
+// 获取通过GET请求传递的参数，并对参数进行处理和编码，同时
 $action = htmlspecialchars($_GET['action'] ?? '');
 $do = htmlspecialchars($_GET['do'] ?? null);
+// 清除$msg变量的值
 unset($msg);
+
+// 如果do有参数值
+// 根据do的值搞个$msg出来, 比如$do="upload" 则$msg="祝贺你，你成功增加了<b>上传值</b>！"
 if (isset($do)) {
     if ($do == "upload")
         $msg = $lang_mybonus['text_success_upload'];
@@ -341,39 +366,56 @@ if (isset($do)) {
     else
         $msg = '';
 }
+//########################################################################################################
+//#### 页面启动 ###########################################################################################
+//########################################################################################################
+// 标准头部
 stdhead($CURUSER['username'] . $lang_mybonus['head_karma_page']);
-
+// 魔力值保留一位小数，并添加千位分隔符
 $bonus = number_format($CURUSER['seedbonus'], 1);
+
+// 如果没有动作
 if (!$action) {
+    // 开始构建兑换奖励的表格
     print("<table align=\"center\" width=\"97%\" border=\"1\" cellspacing=\"0\" cellpadding=\"3\">\n");
+    // NexusPHP魔力值系统
     print("<tr><td class=\"colhead\" colspan=\"4\" align=\"center\"><font class=\"big\">".$SITENAME.$lang_mybonus['text_karma_system']."</font></td></tr>\n");
+    // 如果有信息, 则输出信息
     if ($msg)
         print("<tr><td align=\"center\" colspan=\"4\"><font class=\"striking\"><b>". $msg ."</b></font></td></tr>");
     ?>
+    <!--用你的魔力值（当前109.0）换东东！-->
     <tr><td class="text" align="center" colspan="4"><?php echo $lang_mybonus['text_exchange_your_karma']?><?php echo $bonus?><?php echo $lang_mybonus['text_for_goodies'] ?>
+            <!--"如果按钮不可点，则你的魔力值不足以交换该项。$lockText是上面构建的原因-->
             <br /><b><?php echo $lang_mybonus['text_no_buttons_note'] ?></b><br /><small style="color: orangered">(<?php echo $lockText ?>)</small></td></tr>
     <?php
 
-    print("<tr><td class=\"colhead\" align=\"center\">".$lang_mybonus['col_option']."</td>".
-        "<td class=\"colhead\" align=\"left\">".$lang_mybonus['col_description']."</td>".
-        "<td class=\"colhead\" align=\"center\">".$lang_mybonus['col_points']."</td>".
+    // 列名栏包括:  项目	  简介  	价格	交换
+    print("<tr><td class=\"colhead\" align=\"center\">".$lang_mybonus['col_option']."</td>".// 编号
+        "<td class=\"colhead\" align=\"left\">".$lang_mybonus['col_description']."</td>". // 间接
+        "<td class=\"colhead\" align=\"center\">".$lang_mybonus['col_points']."</td>". // 价格
         "<td class=\"colhead\" align=\"center\">".$lang_mybonus['col_trade']."</td>".
         "</tr>");
 
-
+    // 遍历显示每一项奖励
     for ($i=0; $i < count($allBonus); $i++)
     {
+        //$bonusarray是一个奖励对象
         $bonusarray = $allBonus[$i];
         if (
             ($bonusarray['art'] == 'gift_1' && $bonusgift_bonus == 'no')
             || ($bonusarray['art'] == 'noad' && ($enablead_advertisement == 'no' || $bonusnoad_advertisement == 'no'))
             || ($bonusarray['art'] == 'cancel_hr' && !\App\Models\HitAndRun::getIsEnabled())
         ) {
+            // 没广告的网站, 不需要显示去掉广告这一项兑换
+            // 没hr的网站, 不需要显示去掉hr这一项兑换
+            // 处理下一个奖励
             continue;
         }
-
+        // 开始构建一行了
         print("<tr>");
         print("<form action=\"?action=exchange\" method=\"post\">");
+        // 编号
         print("<td class=\"rowhead_center\"><input type=\"hidden\" name=\"option\" value=\"".$i."\" /><b>".($i + 1)."</b></td>");
         if ($bonusarray['art'] == 'title'){ //for Custom Title!
             $otheroption_title = "<input type=\"text\" name=\"title\" style=\"width: 200px\" maxlength=\"30\" />";
@@ -388,9 +430,11 @@ if (!$action) {
             print("<td class=\"rowfollow\" align='left'><h1>".$bonusarray['name']."</h1>".$bonusarray['description']."<br /><br />".$lang_mybonus['text_select_receiver_ratio']."<br />$otheroption</td><td class=\"rowfollow nowrap\" align='center'>".$lang_mybonus['text_min']."1,000<br />".$lang_mybonus['text_max']."50,000</td>");
         }
         else {  //for VIP or Upload
+            // 其他项的输出简介的主副标题, 价格
             print("<td class=\"rowfollow\" align='left'><h1>".$bonusarray['name']."</h1>".$bonusarray['description']."</td><td class=\"rowfollow\" align='center'>".number_format($bonusarray['points'])."</td>");
         }
 
+        // 如果魔力值够
         if($CURUSER['seedbonus'] >= $bonusarray['points'])
         {
             $permission = 'sendinvite';
@@ -447,28 +491,32 @@ if (!$action) {
                     else $ratio = 0;
                 }
                 else $ratio = $ratiolimit_bonus + 1; //Ratio always above limit
+                // 根据上传量和下载量的多少决定是否能点交换, 显示分享率过高
                 if ($ratiolimit_bonus > 0 && $ratio > $ratiolimit_bonus){
                     print("<td class=\"rowfollow\" align=\"center\"><input type=\"submit\" name=\"submit\" value=\"".$lang_mybonus['text_ratio_too_high']."\" disabled=\"disabled\" /></td>");
-                }
-                else print("<td class=\"rowfollow\" align=\"center\"><input type=\"submit\" name=\"submit\" value=\"".$lang_mybonus['submit_exchange']."\" /></td>");
-            } elseif ($bonusarray['art'] == 'change_username_card') {
+                } else print("<td class=\"rowfollow\" align=\"center\"><input type=\"submit\" name=\"submit\" value=\"".$lang_mybonus['submit_exchange']."\" /></td>");
+            }
+            elseif ($bonusarray['art'] == 'change_username_card') {
                 if (\App\Models\UserMeta::query()->where('uid', $CURUSER['id'])->where('meta_key', \App\Models\UserMeta::META_KEY_CHANGE_USERNAME)->exists()) {
                     print("<td class=\"rowfollow\" align=\"center\"><input type=\"submit\" name=\"submit\" value=\"".$lang_mybonus['text_change_username_card_already_has']."\" disabled=\"disabled\"/></td>");
                 } else {
                     print("<td class=\"rowfollow\" align=\"center\"><input type=\"submit\" name=\"submit\" value=\"".$lang_mybonus['submit_exchange']."\" /></td>");
                 }
-            } elseif ($bonusarray['art'] == 'rainbow_id') {
+            }
+            elseif ($bonusarray['art'] == 'rainbow_id') {
                 if (\App\Models\UserMeta::query()->where('uid', $CURUSER['id'])->where('meta_key', \App\Models\UserMeta::META_KEY_PERSONALIZED_USERNAME)->whereNull('deadline')->exists()) {
                     print("<td class=\"rowfollow\" align=\"center\"><input type=\"submit\" name=\"submit\" value=\"".$lang_mybonus['text_rainbow_id_already_valid_forever']."\" disabled=\"disabled\"/></td>");
                 } else {
                     print("<td class=\"rowfollow\" align=\"center\"><input type=\"submit\" name=\"submit\" value=\"".$lang_mybonus['submit_exchange']."\" /></td>");
                 }
-            } else {
+            }
+            else {
                 print("<td class=\"rowfollow\" align=\"center\"><input type=\"submit\" name=\"submit\" value=\"".$lang_mybonus['submit_exchange']."\" /></td>");
             }
         }
         else
         {
+            // 需要更多魔力值
             print("<td class=\"rowfollow\" align=\"center\"><input type=\"submit\" name=\"submit\" value=\"".$lang_mybonus['text_more_points_needed']."\" disabled=\"disabled\" /></td>");
         }
         print("</form>");
@@ -573,12 +621,14 @@ if (!$action) {
     <?php
 }
 
-// 交换奖励
+// 如果动作为交换奖励
 if ($action == "exchange") {
+    // 作弊处理
     if (isset($_POST["userid"]) || isset($_POST["points"]) || isset($_POST["bonus"]) || isset($_POST["art"]) || !isset($_POST['option']) || !isset($allBonus[$_POST['option']])){
         write_log("User " . $CURUSER["username"] . "," . $CURUSER["ip"] . " is trying to cheat at bonus system",'mod');
         die($lang_mybonus['text_cheat_alert']);
     }
+
     $option = intval($_POST["option"] ?? 0);
     $bonusarray = $allBonus[$option];
     $points = $bonusarray['points'];
