@@ -235,7 +235,7 @@ function formatImg($src, $enableImageResizer, $image_max_width, $image_max_heigh
         write_log($msg, "mod");
         return "";
     }
-	return addTempCode("<img style=\"max-width: 100%\" id=\"$imgId\" alt=\"image\" src=\"$src\"" .($enableImageResizer ?  " onload=\"Scale(this,$image_max_width,$image_max_height);\" onclick=\"Preview(this);\"" : "") .  " />");
+	return addTempCode("<img style=\"max-width: 100%\" id=\"$imgId\" alt=\"image\" src=\"$src\" " .($enableImageResizer ?  " onload=\"Scale(this,$image_max_width,$image_max_height);\" onclick=\"Preview(this);\"" : "") .  " referrerpolicy=\"never\"/>");
 }
 
 function formatFlash($src, $width, $height) {
@@ -1088,6 +1088,33 @@ if ($enableattach_attachment == 'yes'){
 <tr>
 <td colspan="2" valign="middle">
 <iframe src="<?php echo getSchemeAndHttpHost()?>/attachment.php" width="100%" height="24" frameborder="0" scrolling="no" marginheight="0" marginwidth="0"></iframe>
+<tr></tr>
+<script async="" src="//img.ptvicomo.net/js/blueimp-file-upload/jquery.fileupload.js"></script>
+<script>
+$(function () {
+    $('button[data-chevereto-pup-trigger]').fileupload({
+        url: 'https://img.ptvicomo.net/upload',
+        dataType: 'json',
+        autoUpload: false,
+        acceptFileTypes: /(\.|\/)(gif|jpe?g|png)$/i,
+        maxFileSize: 5000000, // 5 MB
+        headers: {
+            'Authorization': 'Bearer 3|FbMYydv0BZqSUGd1pRPGVcXKCfeXllCyA1MxmFWp'
+        },
+        add: function (e, data) {
+            data.formData = { file: data.files[0].name }; // Set file name
+            data.context = $('<p/>').text('Uploading...').appendTo(document.body);
+            data.submit();
+        },
+        done: function (e, data) {
+            data.context.text('Upload finished.');
+        }
+    });
+});
+</script>
+<button data-chevereto-pup-trigger="" data-target="#descr">上传至图床</button>
+&nbsp;&nbsp; 支持图片格式：JPG JPEG PNG BMP GIF  限制大小 5 M（仅发布种子时可以使用） &nbsp;&nbsp; <a style="color:blue;font:10px" href="https://img.ptvicomo.net/upload" target="_blank">跳转至图床页面</a>
+>
 </td>
 </tr>
 <?php
@@ -1766,7 +1793,7 @@ function show_image_code () {
 		unset($imagehash);
 		$imagehash = image_code () ;
 		print ("<tr><td class=\"rowhead\">".$lang_functions['row_security_image']."</td>");
-		print ("<td align=\"left\"><img src=\"".htmlspecialchars("image.php?action=regimage&imagehash=".$imagehash."&secret=".($_GET['secret'] ?? ''))."\" border=\"0\" alt=\"CAPTCHA\" /></td></tr>");
+		print ("<td align=\"left\"><img src=\"".htmlspecialchars("image.php?action=regimage&imagehash=".$imagehash."&secret=".($_GET['secret'] ?? ''))."\" border=\"0\" alt=\"CAPTCHA\" />  </td></tr>");
 		print ("<tr><td class=\"rowhead\">".$lang_functions['row_security_code']."</td><td align=\"left\">");
 		print("<input type=\"text\" autocomplete=\"off\" style=\"width: 180px; border: 1px solid gray\" name=\"imagestring\" value=\"\" />");
 		print("<input type=\"hidden\" name=\"imagehash\" value=\"$imagehash\" /></td></tr>");
@@ -2184,7 +2211,7 @@ function mkprettytime($s) {
 	}
 
 	if ($t["day"])
-	return $t["day"] . ($lang_functions['text_day'] ?? 'day(s)') . sprintf("%02d:%02d:%02d", $t["hour"], $t["min"], $t["sec"]);
+	return $t["day"] . ($lang_functions['text_day'] ?? '天') . sprintf("%02d:%02d:%02d", $t["hour"], $t["min"], $t["sec"]);
 	if ($t["hour"])
 	return sprintf("%d:%02d:%02d", $t["hour"], $t["min"], $t["sec"]);
 	//    if ($t["min"])
@@ -2375,7 +2402,7 @@ function get_css_row() {
 		while($row = mysql_fetch_array($res)) {
 			$rows[$row['id']] = $row;
 		}
-		$Cache->cache_value('stylesheet_content', $rows, 95400);
+		$Cache->cache_value('stylesheet_content', $rows, 0);
 	}
 	return $rows[$cssid];
 }
@@ -2523,6 +2550,7 @@ $cssupdatedate=($cssupdatedate ? "?".htmlspecialchars($cssupdatedate) : "");
 <link rel="stylesheet" href="<?php echo $css_uri."DomTT.css".$cssupdatedate?>" type="text/css" />
 <link rel="stylesheet" href="styles/curtain_imageresizer.css<?php echo $cssupdatedate?>" type="text/css" />
 <link rel="stylesheet" href="styles/nexus.css<?php echo $cssupdatedate?>" type="text/css" />
+<link rel="stylesheet" href="styles/diy.css" type="text/css" />
 <?php
 if ($CURUSER){
 //	$caticonrow = get_category_icon_row($CURUSER['caticon']);
@@ -2629,7 +2657,7 @@ else {
 	if($connect == "yes")
 		$connectable = "<b><font color=\"green\">".$lang_functions['text_yes']."</font></b>";
 	elseif ($connect == 'no')
-		$connectable = "<a href=\"faq.php#id21\"><b><font color=\"red\">".$lang_functions['text_no']."</font></b></a>";
+		$connectable = "<b><font color=\"green\">".$lang_functions['text_yes']."</font></b>";
 	else
 		$connectable = $lang_functions['text_unknown'];
 
@@ -2662,24 +2690,24 @@ else {
 		<td class="bottom" align="left">
             <span class="medium">
                 <?php echo $lang_functions['text_welcome_back'] ?>, <?php echo get_username($CURUSER['id'])?>
-                [<a href="logout.php"><?php echo $lang_functions['text_logout'] ?></a>]
-                [<a href="usercp.php"><?php echo $lang_functions['text_user_cp'] ?></a>]
-                <?php if (get_user_class() >= UC_MODERATOR) { ?> [<a href="staffpanel.php"><?php echo $lang_functions['text_staff_panel'] ?></a>] <?php }?>
-                <?php if (get_user_class() >= UC_SYSOP) { ?> [<a href="settings.php"><?php echo $lang_functions['text_site_settings'] ?></a>]<?php } ?>
-                [<a href="torrents.php?inclbookmarked=1&amp;allsec=1&amp;incldead=0"><?php echo $lang_functions['text_bookmarks'] ?></a>]
-                <font class = 'color_bonus'><?php echo $lang_functions['text_bonus'] ?></font>[<a href="mybonus.php"><?php echo $lang_functions['text_use'] ?></a>]: <?php echo number_format($CURUSER['seedbonus'], 1)?>
+                <a href="logout.php"><?php echo $lang_functions['text_logout'] ?></a>
+                <a href="usercp.php"><?php echo $lang_functions['text_user_cp'] ?></a>
+                <?php if (get_user_class() >= UC_MODERATOR) { ?> <a href="staffpanel.php"><?php echo $lang_functions['text_staff_panel'] ?></a> <?php }?>
+                <?php if (get_user_class() >= UC_SYSOP) { ?> <a href="settings.php"><?php echo $lang_functions['text_site_settings'] ?></a> <?php } ?>
+                <a href="torrents.php?inclbookmarked=1&amp;allsec=1&amp;incldead=0"><?php echo $lang_functions['text_bookmarks'] ?></a>
+                <font class = 'color_bonus'><?php echo $lang_functions['text_bonus'] ?></font><a href="mybonus.php"><?php echo $lang_functions['text_use'] ?></a> : <?php echo number_format($CURUSER['seedbonus'], 1)?>
                 <?php if($attendance){ printf(' <a href="attendance.php" class="">'.$lang_functions['text_attended'].'</a>', $attendance->points, $CURUSER['attendance_card']); }else{ printf(' <a href="attendance.php" class="faqlink">%s</a>', $lang_functions['text_attendance']);}?>
-                <a href="medal.php">[<?php echo nexus_trans('medal.label')?>]</a>
-                <font class = 'color_invite'><?php echo $lang_functions['text_invite'] ?></font>[<a href="invite.php?id=<?php echo $CURUSER['id']?>"><?php echo $lang_functions['text_send'] ?></a>]: <?php echo sprintf('%s(%s)', $CURUSER['invites'], \App\Models\Invite::query()->where('inviter', $CURUSER['id'])->where('invitee', '')->where('expired_at', '>', now())->count())?>
-                <?php if(get_user_class() >= \App\Models\User::getAccessAdminClassMin()) printf('[<a href="%s" target="_blank">%s</a>]', nexus_env('FILAMENT_PATH', 'nexusphp'), $lang_functions['text_management_system'])?>
+                <a href="medal.php"><?php echo nexus_trans('medal.label')?></a>
+                <font class = 'color_invite'><?php echo $lang_functions['text_invite'] ?></font> <a href="invite.php?id=<?php echo $CURUSER['id']?>"><?php echo $lang_functions['text_send'] ?></a>: <?php echo sprintf('%s(%s)', $CURUSER['invites'], \App\Models\Invite::query()->where('inviter', $CURUSER['id'])->where('invitee', '')->where('expired_at', '>', now())->count())?>
+                <?php if(get_user_class() >= \App\Models\User::getAccessAdminClassMin()) printf(' <a href="%s" target="_blank">%s</a> ', nexus_env('FILAMENT_PATH', 'nexusphp'), $lang_functions['text_management_system'])?>
                 <br />
 	            <font class="color_ratio"><?php echo $lang_functions['text_ratio'] ?></font> <?php echo $ratio?>
                 <font class='color_uploaded'><?php echo $lang_functions['text_uploaded'] ?></font> <?php echo mksize($CURUSER['uploaded'])?>
                 <font class='color_downloaded'> <?php echo $lang_functions['text_downloaded'] ?></font> <?php echo mksize($CURUSER['downloaded'])?>
                 <font class='color_active'><?php echo $lang_functions['text_active_torrents'] ?></font> <img class="arrowup" alt="Torrents seeding" title="<?php echo $lang_functions['title_torrents_seeding'] ?>" src="pic/trans.gif" /><?php echo $activeseed?>  <img class="arrowdown" alt="Torrents leeching" title="<?php echo $lang_functions['title_torrents_leeching'] ?>" src="pic/trans.gif" /><?php echo $activeleech?>&nbsp;&nbsp;
                 <font class='color_connectable'><?php echo $lang_functions['text_connectable'] ?></font><?php echo $connectable?> <?php echo maxslots();?>
-                <?php if(\App\Models\HitAndRun::getIsEnabled()) { ?><font class='color_bonus'>H&R: </font> <?php echo sprintf('[<a href="myhr.php">%s</a>]', (new \App\Repositories\HitAndRunRepository())->getStatusStats($CURUSER['id']))?><?php }?>
-                <?php if(\App\Models\Claim::getConfigIsEnabled()) { ?><font class='color_bonus'><?php echo $lang_functions['menu_claim']?></font> <?php echo sprintf('[<a href="claim.php?uid=%s">%s</a>]', $CURUSER['id'], (new \App\Repositories\ClaimRepository())->getStats($CURUSER['id']))?><?php }?>
+                <?php if(\App\Models\HitAndRun::getIsEnabled()) { ?><font class='color_bonus'>H&R: </font> <?php echo sprintf('<a href="myhr.php">%s</a>', (new \App\Repositories\HitAndRunRepository())->getStatusStats($CURUSER['id']))?><?php }?>
+                <?php if(\App\Models\Claim::getConfigIsEnabled()) { ?><font class='color_bonus'><?php echo $lang_functions['menu_claim']?></font> <?php echo sprintf('<a href="claim.php?uid=%s">%s</a>', $CURUSER['id'], (new \App\Repositories\ClaimRepository())->getStats($CURUSER['id']))?><?php }?>
             </span>
         </td>
                 <?php if(SearchBox::isSpecialEnabled() && get_setting('main.enable_global_search') == 'yes'){?>
@@ -3260,7 +3288,7 @@ function commenttable($rows, $type, $parent_id, $review = false)
 		print("<div style=\"margin-top: 8pt; margin-bottom: 8pt;\"><table id=\"cid".$row["id"]."\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\" width=\"100%\"><tr><td class=\"embedded\" width=\"99%\">#" . $row["id"] . "&nbsp;&nbsp;<font color=\"gray\">".$lang_functions['text_by']."</font>");
 		print(get_username($row["user"],false,true,true,false,false,true));
 		print("&nbsp;&nbsp;<font color=\"gray\">".$lang_functions['text_at']."</font>".gettime($row["added"]).
-		($row["editedby"] && user_can('commanage') ? " - [<a href=\"comment.php?action=vieworiginal&amp;cid=".$row['id']."&amp;type=".$type."\">".$lang_functions['text_view_original']."</a>]" : "") . "</td><td class=\"embedded nowrap\" width=\"1%\"><a href=\"#top\"><img class=\"top\" src=\"pic/trans.gif\" alt=\"Top\" title=\"Top\" /></a>&nbsp;&nbsp;</td></tr></table></div>");
+		($row["editedby"] && user_can('commanage') ? " - <a href=\"comment.php?action=vieworiginal&amp;cid=".$row['id']."&amp;type=".$type."\">".$lang_functions['text_view_original']."</a>" : "") . "</td><td class=\"embedded nowrap\" width=\"1%\"><a href=\"#top\"><img class=\"top\" src=\"pic/trans.gif\" alt=\"Top\" title=\"Top\" /></a>&nbsp;&nbsp;</td></tr></table></div>");
 		$avatar = ($CURUSER["avatars"] == "yes" ? htmlspecialchars(trim($userRow["avatar"])) : "");
 		if (!$avatar)
 			$avatar = "pic/default_avatar.png";
@@ -3275,7 +3303,7 @@ function commenttable($rows, $type, $parent_id, $review = false)
 		$secs = 900;
 		$dt = sqlesc(date("Y-m-d H:i:s",(TIMENOW - $secs))); // calculate date.
 		print("<tr>\n");
-		print("<td class=\"rowfollow\" width=\"150\" valign=\"top\" style=\"padding: 0px;\">".return_avatar_image($avatar)."</td>\n");
+		print("<td class=\"rowfollow\" width=\"200\" valign=\"top\" style=\"padding: 0px;\">".return_avatar_image($avatar)."</td>\n");
 		print("<td class=\"rowfollow\" valign=\"top\"><br />".$text.$text_editby."</td>\n");
 		print("</tr>\n");
 		$actionbar = "<a href=\"comment.php?action=add&amp;sub=quote&amp;cid=".$row['id']."&amp;pid=".$parent_id."&amp;type=".$type."\"><img class=\"f_quote\" src=\"pic/trans.gif\" alt=\"Quote\" title=\"".$lang_functions['title_reply_with_quote']."\" /></a>".
@@ -3639,7 +3667,7 @@ foreach ($rows as $row)
         if (empty($coverSrc) && !empty($row['cover'])) {
             $coverSrc = $row['cover'];
         }
-        $tdCover = sprintf('<td class="embedded" style="text-align: center;width: 46px;height: 46px"><img src="pic/misc/spinner.svg" data-src="%s" class="nexus-lazy-load" style="max-height: 46px;max-width: 46px" /></td>', $coverSrc);
+        $tdCover = sprintf('<td class="embedded" style="text-align: center;width: 46px;height: 46px"><img src="pic/misc/spinner.svg" data-src="%s" class="nexus-lazy-load" style="max-height: 46px;max-width: 46px" referrerPolicy="no-referrer" /></td>', $coverSrc);
     }
 
 	print("<td class=\"rowfollow\" width=\"100%\" align=\"left\" style='padding: 0px'><table class=\"torrentname\" width=\"100%\"><tr" . $sphighlight . ">$tdCover<td class=\"embedded\" style='padding-left: 5px'>".$stickyicon."<a $short_torrent_name_alt $mouseovertorrent href=\"details.php?id=".$id."&amp;hit=1\"><b>".htmlspecialchars($dispname)."</b></a>");
@@ -3888,7 +3916,7 @@ function get_username($id, $big = false, $link = true, $bold = true, $target = f
         $medalHtml = '';
 		foreach ($arr['wearing_medals'] ?? [] as $medal) {
             $medalHtml .= sprintf(
-                '<img src="%s" title="%s" class="%s preview" style="max-height: %s;max-width: %s;margin-left: %s"/>',
+                '<img src="%s" title="%s" class="%s preview" referrerpolicy=\"never\" style="max-height: %s;max-width: %s;margin-left: %s" />',
                 $medal['image_large'], $medal['name'], $medalClass, $medalSize, $medalSize, $marginLeft
             );
         }
@@ -4657,7 +4685,7 @@ function get_torrent_promotion_append_sub($promotion = 1,$forcemode = "",$showti
 				}
 				$timeout = gettime(date("Y-m-d H:i:s", $futuretime), false, false, true, false, true);
 				if ($timeout)
-				$onmouseover = " <font color='#0000FF'>".$lang_functions['text_will_end_in'].$timeout."</font>"; //free类型字符显示为蓝色，可以更改它
+				$onmouseover = " <font color='#fffb00'>".$lang_functions['text_will_end_in'].$timeout."</font>"; //free类型字符显示为蓝色，可以更改它
 				else $promotion = 1;
 			}
 			break;
@@ -4689,7 +4717,7 @@ function get_torrent_promotion_append_sub($promotion = 1,$forcemode = "",$showti
 				}
 				$timeout = gettime(date("Y-m-d H:i:s", $futuretime), false, false, true, false, true);
 				if ($timeout)
-				$onmouseover = " <font color='#00CC66'>".$lang_functions['text_will_end_in'].$timeout."</font>"; //2XFree 显示为青色，可以更改它
+				$onmouseover = " <font color='#00ffff'>".$lang_functions['text_will_end_in'].$timeout."</font>"; //2XFree 显示为青色，可以更改它
 				else $promotion = 1;
 			}
 			break;
@@ -5227,7 +5255,7 @@ function valid_class_name($filename)
 function return_avatar_image($url)
 {
 	global $CURLANGDIR;
-	return "<img src=\"".$url."\" alt=\"avatar\" width=\"150px\" onload=\"check_avatar(this, '".$CURLANGDIR."');\" />";
+	return "<img src=\"".$url."\" alt=\"avatar\" width=\"200px\"  onload=\"check_avatar(this, '".$CURLANGDIR."');\" />";
 }
 function return_category_image($categoryid, $link="")
 {
@@ -5490,7 +5518,7 @@ function displayHotAndClassic()
                                 continue;
                             }
 
-                            $thumbnail = "<img width=\"{$width}\" height=\"{$height}\" src=\"".$photo_url."\" border=\"0\" alt=\"poster\" />";
+                            $thumbnail = "<img width=\"{$width}\" height=\"{$height}\" src=\"".$photo_url."\" border=\"0\"  alt=\"poster\" />";
 
                             $thumbnail = "<a style=\"margin-right: 2px\" href=\"details.php?id=" . $array['id'] . "&amp;hit=1\" onmouseover=\"domTT_activate(this, event, 'content', '" . htmlspecialchars("<font class=\'big\'><b>" . (addslashes($array['name'] . $pro_torrent)) . "</b></font><br /><font class=\'medium\'>".(addslashes($array['small_descr'])) ."</font>"). "', 'trail', true, 'delay', 0,'lifetime',5000,'styleClass','niceTitle','maxWidth', 600);\">" . $thumbnail . "</a>";
                             $movies_list .= $thumbnail;
@@ -6496,5 +6524,6 @@ function can_view_post($uid, $post)
     do_log("$log, TRUE");
     return true;
 }
+
 
 ?>
