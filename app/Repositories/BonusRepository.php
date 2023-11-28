@@ -3,6 +3,7 @@ namespace App\Repositories;
 
 use App\Exceptions\NexusException;
 use App\Models\BonusLogs;
+use App\Models\CustomLoanRepayment;
 use App\Models\HitAndRun;
 use App\Models\Invite;
 use App\Models\Medal;
@@ -370,5 +371,248 @@ class BonusRepository extends BaseRepository
         });
     }
 
+    // 贷款
+    public function customLoan($user, $requireBonus, $logBusinessType, $logComment = '', array $userUpdates = []) {
+        // 各种异常
+        if (!isset(BonusLogs::$businessTypes[$logBusinessType])) {
+            throw new \InvalidArgumentException("Invalid logBusinessType: $logBusinessType");
+        }
+        if (isset($userUpdates['seedbonus']) || isset($userUpdates['bonuscomment'])) {
+            throw new \InvalidArgumentException("Not support update seedbonus or bonuscomment");
+        }
+        if ($requireBonus <= 0) {
+            return;
+        }
+        // 获取用户对象
+        $user = $this->getUser($user);
+        // 检查用户对象的钱包够不够买, 贷款不需要考虑此项
+//        if ($user->seedbonus < $requireBonus) {
+//            do_log("user: {$user->id}, bonus: {$user->seedbonus} < requireBonus: $requireBonus", 'error');
+//            throw new \LogicException("User bonus not enough.");
+//        }
+        // MySQL事务
+        NexusDB::transaction(function () use ($user, $requireBonus, $logBusinessType, $logComment, $userUpdates) {
+            // 反斜杠转义
+            $logComment = addslashes($logComment);
+            // 前加年月日-
+            $bonusComment = date('Y-m-d') . " - $logComment";
+            // 用户原有魔力
+            $oldUserBonus = $user->seedbonus;
+            // 用户贷款后有魔力(浮点数相加)
+            $newUserBonus = bcadd($oldUserBonus, $requireBonus);
+            // 日志信息构建和输出内部日志
+            $log = "user: {$user->id}, requireBonus: $requireBonus, oldUserBonus: $oldUserBonus, newUserBonus: $newUserBonus, logBusinessType: $logBusinessType, logComment: $logComment";
+            // 后台日志输出 /tmp/nexus/nexus-20231125.txt
+            do_log($log);
+            // 构建update对象
+            // 参数1 用户的魔力值为贷款后新的魔力值
+            $userUpdates['seedbonus'] = $newUserBonus;
+            // 参数2 追加新记录到bonuscomment的前面，bounscomment是一个文档包括多行， 新纪录往前面加一行
+            $userUpdates['bonuscomment'] = NexusDB::raw("if(bonuscomment = '', '$bonusComment', concat_ws('\n', '$bonusComment', bonuscomment))");
+            // 执行sql更新用户表
+            $affectedRows = NexusDB::table($user->getTable())
+                ->where('id', $user->id)
+                ->where('seedbonus', $oldUserBonus)
+                ->update($userUpdates);
+            if ($affectedRows != 1) {
+                // 超时了或者错误了
+                do_log("update user seedbonus affected rows != 1, query: " . last_query(), 'error');
+                throw new \RuntimeException("Update user seedbonus fail.");
+            }
+            // nowStr = new Date();
+            $nowStr = now()->toDateTimeString();
+            $bonusLog = [
+                'business_type' => $logBusinessType,
+                'uid' => $user->id,
+                'old_total_value' => $oldUserBonus,
+                'value' => $requireBonus,
+                'new_total_value' => $newUserBonus,
+                'comment' => sprintf('[%s] %s', BonusLogs::$businessTypes[$logBusinessType]['text'], $logComment),
+                'created_at' => $nowStr,
+                'updated_at' => $nowStr,
+            ];
+            // 插入数据表bonus_logs
+            BonusLogs::query()->insert($bonusLog);
+            // 保存贷款记录
+            $loanDO = [
+                'user_id' => $user->id,
+                'seedbonus' => $requireBonus,
+                'comment' => 'loan [' . $requireBonus . '] seedbonus.'
+            ];
+            CustomLoanRepayment::query()->insert($loanDO);
+            // 系统日志
+            do_log("bonusLog: " . nexus_json_encode($bonusLog));
+            // 清除缓存
+            clear_user_cache($user->id, $user->passkey);
+        });
+    }
 
+    // 还款
+    public function customRepayment($user, $requireBonus, $logBusinessType, $logComment = '', array $userUpdates = []) {
+        // 各种异常
+        if (!isset(BonusLogs::$businessTypes[$logBusinessType])) {
+            throw new \InvalidArgumentException("Invalid logBusinessType: $logBusinessType");
+        }
+        if (isset($userUpdates['seedbonus']) || isset($userUpdates['bonuscomment'])) {
+            throw new \InvalidArgumentException("Not support update seedbonus or bonuscomment");
+        }
+        if ($requireBonus <= 0) {
+            return;
+        }
+        // 获取用户对象
+        $user = $this->getUser($user);
+        // 检查用户对象的钱包够不够买
+        if ($user->seedbonus < $requireBonus) {
+            do_log("user: {$user->id}, bonus: {$user->seedbonus} < requireBonus: $requireBonus", 'error');
+            throw new \LogicException("User bonus not enough.");
+        }
+        // MySQL事务
+        NexusDB::transaction(function () use ($user, $requireBonus, $logBusinessType, $logComment, $userUpdates) {
+            // 反斜杠转义
+            $logComment = addslashes($logComment);
+            // 前加年月日-
+            $bonusComment = date('Y-m-d') . " - $logComment";
+            // 用户原有魔力
+            $oldUserBonus = $user->seedbonus;
+            // 用户贷款后有魔力(浮点数相加)
+            $newUserBonus = bcsub($oldUserBonus, $requireBonus);
+            // 日志信息构建和输出内部日志
+            $log = "user: {$user->id}, requireBonus: $requireBonus, oldUserBonus: $oldUserBonus, newUserBonus: $newUserBonus, logBusinessType: $logBusinessType, logComment: $logComment";
+            // 后台日志输出 /tmp/nexus/nexus-20231125.txt
+            do_log($log);
+            // 构建update对象
+            // 参数1 用户的魔力值为贷款后新的魔力值
+            $userUpdates['seedbonus'] = $newUserBonus;
+            // 参数2 追加新记录到bonuscomment的前面，bounscomment是一个文档包括多行， 新纪录往前面加一行
+            $userUpdates['bonuscomment'] = NexusDB::raw("if(bonuscomment = '', '$bonusComment', concat_ws('\n', '$bonusComment', bonuscomment))");
+            // 执行sql更新用户表
+            $affectedRows = NexusDB::table($user->getTable())
+                ->where('id', $user->id)
+                ->where('seedbonus', $oldUserBonus)
+                ->update($userUpdates);
+            if ($affectedRows != 1) {
+                // 超时了或者错误了
+                do_log("update user seedbonus affected rows != 1, query: " . last_query(), 'error');
+                throw new \RuntimeException("Update user seedbonus fail.");
+            }
+            // nowStr = new Date();
+            $nowStr = now()->toDateTimeString();
+            $bonusLog = [
+                'business_type' => $logBusinessType,
+                'uid' => $user->id,
+                'old_total_value' => $oldUserBonus,
+                'value' => $requireBonus,
+                'new_total_value' => $newUserBonus,
+                'comment' => sprintf('[%s] %s', BonusLogs::$businessTypes[$logBusinessType]['text'], $logComment),
+                'created_at' => $nowStr,
+                'updated_at' => $nowStr,
+            ];
+            // 插入数据表bonus_logs
+            BonusLogs::query()->insert($bonusLog);
+            // 删除贷款记录
+            $record = CustomLoanRepayment::query() -> where("user_id", $user->id);
+            $record->delete();
+            // 系统日志
+            do_log("bonusLog: " . nexus_json_encode($bonusLog));
+            // 清除缓存
+            clear_user_cache($user->id, $user->passkey);
+        });
+    }
+
+    // 进货大头菜
+    public function customBuyTurnip($user, $requireBonus, $num, $logBusinessType, $logComment = '', array $userUpdates = []) {
+        // 各种异常
+        if (!isset(BonusLogs::$businessTypes[$logBusinessType])) {
+            throw new \InvalidArgumentException("Invalid logBusinessType: $logBusinessType");
+        }
+        if (isset($userUpdates['seedbonus']) || isset($userUpdates['bonuscomment'])) {
+            throw new \InvalidArgumentException("Not support update seedbonus or bonuscomment");
+        }
+        if ($requireBonus <= 0) {
+            return;
+        }
+        // 获取用户对象
+        $user = $this->getUser($user);
+        // 检查用户对象的钱包够不够买
+        if ($user->seedbonus < $requireBonus * $num) {
+            do_log("user: {$user->id}, bonus: {$user->seedbonus} < requireBonus: $requireBonus * $num", 'error');
+            throw new \LogicException("User bonus not enough.");
+        }
+        // MySQL事务
+        NexusDB::transaction(function () use ($user, $requireBonus, $num, $logBusinessType, $logComment, $userUpdates) {
+            // 反斜杠转义
+            $logComment = addslashes($logComment);
+            // 前加年月日-
+            $bonusComment = date('Y-m-d') . " - $logComment";
+            // 用户原有魔力
+            $oldUserBonus = $user->seedbonus;
+            // 用户进货后有魔力(浮点数相加)
+            $newUserBonus = bcsub($oldUserBonus, $requireBonus*$num);
+            // 日志信息构建和输出内部日志
+            $log = "user: {$user->id}, requireBonus: $requireBonus, oldUserBonus: $oldUserBonus, newUserBonus: $newUserBonus, logBusinessType: $logBusinessType, logComment: $logComment";
+            // 后台日志输出 /tmp/nexus/nexus-20231125.txt
+            do_log($log);
+            // 构建update对象
+            // 参数1 用户新的魔力值
+            $userUpdates['seedbonus'] = $newUserBonus;
+            // 参数2 追加新记录到bonuscomment的前面，bounscomment是一个文档包括多行， 新纪录往前面加一行
+            $userUpdates['bonuscomment'] = NexusDB::raw("if(bonuscomment = '', '$bonusComment', concat_ws('\n', '$bonusComment', bonuscomment))");
+            // 执行sql更新用户表
+            $affectedRows = NexusDB::table($user->getTable())
+                ->where('id', $user->id)
+                ->where('seedbonus', $oldUserBonus)
+                ->update($userUpdates);
+            if ($affectedRows != 1) {
+                // 超时了或者错误了
+                do_log("update user seedbonus affected rows != 1, query: " . last_query(), 'error');
+                throw new \RuntimeException("Update user seedbonus fail.");
+            }
+            // 入库或更新custom_turnip表
+            $oldRecord = NexusDB::table("custom_turnip")->where('user_id', $user->id)->first();
+            if ($oldRecord === null) {
+                $tmpDate = date('Y-m-d H:i:s');
+                NexusDB::table("custom_turnip")->insert([
+                    'id' => time(),
+                    'username' => $user->username,
+                    'user_id' => $user->id,
+                    'created_at' => $tmpDate,
+                    'updated_at' => $tmpDate,
+                    'comment' => 'buy price=' . $requireBonus . ' x ' . $num,
+                    'number' => $num,
+                    'price' => $requireBonus,
+                    'seedbonus' => 0.0,
+                ]);
+            } else {
+                print("oldRecordNumber=" . $oldRecord->number);
+                print("num=" . $num);
+                $turnipUpdate = [];
+                $turnipUpdate['number'] = $oldRecord->number + $num;
+                $turnipUpdate['updated_at'] = now()->toDateTimeString();
+                NexusDB::table("custom_turnip")
+                    ->where('user_id', $user->id)->update($turnipUpdate);
+            }
+            // 日志插入数据表bonus_logs
+            $nowStr = now()->toDateTimeString();
+            $bonusLog = [
+                'business_type' => $logBusinessType,
+                'uid' => $user->id,
+                'old_total_value' => $oldUserBonus,
+                'value' => $requireBonus,
+                'new_total_value' => $newUserBonus,
+                'comment' => sprintf('[%s] %s', BonusLogs::$businessTypes[$logBusinessType]['text'], $logComment),
+                'created_at' => $nowStr,
+                'updated_at' => $nowStr,
+            ];
+            BonusLogs::query()->insert($bonusLog);
+            // 系统日志
+            do_log("bonusLog: " . nexus_json_encode($bonusLog));
+            // 清除缓存
+            clear_user_cache($user->id, $user->passkey);
+        });
+    }
+
+    // 出售
+    public function customSaleTurnip($user, $requireBonus, $num, $logBusinessType, $logComment = '', array $userUpdates = []) {
+
+    }
 }
