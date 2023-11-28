@@ -1,4 +1,7 @@
 <?php
+
+use App\Models\CustomLoanRepayment;
+
 require_once('../include/bittorrent.php');
 dbconn();
 require_once(get_langfile_path());
@@ -6,28 +9,76 @@ require(get_langfile_path("",true));
 loggedinorreturn();
 parked();
 
+function getWeekDayNumber() {
+//    return date('N');
+    return 7;
+}
+function getTodayTurnip() {
+    date_default_timezone_set('Asia/Shanghai');//设置时区为上海
+    $am_timestamp = strtotime(date('Y-m-d'));//获取当前时间的0点时间戳
+    $pm_timestamp = strtotime(date('Y-m-d') . ' 12:00:00');//获取当前时间的12点时间戳
+    if (date('A') == 'AM') {
+        $date_str = date('Y-m-d 00:00:00', $am_timestamp);
+    } else {
+        $date_str = date('Y-m-d 12:00:00', $pm_timestamp);
+    }
+//    echo $date_str;
+    $queryCalendarResult = \App\Models\CustomTurnipCalendar::query()->where('date', $date_str)->first();
+    return $queryCalendarResult;
+}
 function bonusarray($option = 0){
+    $turnipDaily = getTodayTurnip();
+
     global $onegbupload_bonus,$fivegbupload_bonus,$tengbupload_bonus,$oneinvite_bonus,$customtitle_bonus,$vipstatus_bonus, $basictax_bonus, $taxpercentage_bonus, $bonusnoadpoint_advertisement, $bonusnoadtime_advertisement;
     global $lang_mybonus;
 
     $results = [];
 
+    // 进货 象岛农庄
+    $bonus = array();
+    $bonus['art'] = 'buyTurnip'; // type
+    $bonus['menge'] = 0; // 1gb的字节数
+    if (getWeekDayNumber() == 7) {
+        $bonus['points'] = $turnipDaily['price'];
+        $bonus['name'] = "象岛农庄 【" . $turnipDaily['name'] . " - 作物成熟 - 开售中】";
+        $bonus['description'] = $turnipDaily['name']."的价格是".$turnipDaily['price']."，保质期至下周六晚上，要马上进货吗？";
+    } else {
+        $bonus['points'] = 0;
+        $bonus['name'] = "象岛农庄 【科学种植中 - 等待收获】";
+        $bonus['description'] = "每周日新的流行农产品成熟，小象可以来这里批发进货";
+    }
+    $results[] = $bonus;
+
+    // 出售
+    $bonus = array();
+    $bonus['points'] = $turnipDaily['price'];
+    $bonus['art'] = 'saleTurnip'; // type
+    $bonus['menge'] = 0;
+    if (getWeekDayNumber() == 7) {
+        $bonus['name'] = "小象新鲜蔬菜店 【休息日】";
+        $bonus['description'] = "岛民都在家看硬盘里的影视资源，没人来买东西了";
+    } else {
+        $bonus['name'] = "小象新鲜蔬菜店 【市场单价：".$turnipDaily['price']."】";
+        $bonus['description'] = $turnipDaily['name']."~ ".$turnipDaily['name']."~ "."能涨价就太好了~~";
+    }
+    $results[] = $bonus;
+
     //借款
     $bonus = array();
-    $bonus['points'] = 1;// 加个
+    $bonus['points'] = 0.0;// 加个
     $bonus['art'] = 'loan'; // type
     $bonus['menge'] = 0; // 1gb的字节数
-    $bonus['name'] = "申请贷款"; // text
-    $bonus['description'] = "在还款之前申请一笔贷款, 你只能申请一笔贷款";// text
+    $bonus['name'] = "贷款"; // text
+    $bonus['description'] = "福利象草贷, 最高10万象草秒到账, 手续费0元, 日息低至2%, 你只能同时申请一笔贷款";// text
     $results[] = $bonus;
 
     //还款
     $bonus = array();
-    $bonus['points'] = 2;// 加个
+    $bonus['points'] = 100000;// 加个
     $bonus['art'] = 'repayment'; // type
     $bonus['menge'] = 0; // 1gb的字节数
-    $bonus['name'] = "还款"; // text
-    $bonus['description'] = "偿还你的上一笔贷款";// text
+    $bonus['name'] = "偿还贷款"; // text
+    $bonus['description'] = "是时候付出代价了, 偿还你的上一笔贷款, 长期不还有概率被管理员强制执行或资产抵债";// text
     $results[] = $bonus;
 
     //1.0 GB Uploaded
@@ -363,6 +414,22 @@ if (isset($do)) {
         $msg =  $lang_mybonus['text_success_buy_change_username_card'];
     elseif ($do == 'duplicated')
         $msg = $lockText;
+    elseif ($do == 'loan_success')
+        $msg = "贷款成功";
+    elseif ($do == 'loan_failed')
+        $msg = "贷款失败";
+    elseif ($do == 'repayment_success')
+        $msg = "还款成功";
+    elseif ($do == 'repayment_failed')
+        $msg = "还款失败";
+    elseif ($do == 'buy_turnip_success')
+        $msg = "进货成功";
+    elseif ($do == 'buy_turnip_failed')
+        $msg = "进货失败";
+    elseif ($do == 'sale_turnip_success')
+        $msg = "出售成功";
+    elseif ($do == 'sale_turnip_failed')
+        $msg = "出售失败";
     else
         $msg = '';
 }
@@ -373,6 +440,28 @@ if (isset($do)) {
 stdhead($CURUSER['username'] . $lang_mybonus['head_karma_page']);
 // 魔力值保留一位小数，并添加千位分隔符
 $bonus = number_format($CURUSER['seedbonus'], 1);
+
+function totalToRepay($userid) {
+    $loanInfo = CustomLoanRepayment::query()->where('user_id', $userid)->get();
+    if ($loanInfo->isNotEmpty()) {
+        // print($loanInfo);
+        // 计算贷款总利息
+        $seedbonus = $loanInfo[0]['seedbonus']; // 贷款的钱数
+        $createdAt = strtotime($loanInfo[0]['created_at']); // 贷款开始时间的时间戳
+        $today = time(); // 今天的时间戳
+        $daysPassed = floor(($today - $createdAt) / (60 * 60 * 24)); // 已经过去的天数
+        $totalInterest = $seedbonus * pow(1.02, $daysPassed) - $seedbonus; // 总利息
+        // 计算用户今天需要还款的总额
+        $result = $seedbonus + $totalInterest; // 总共需要还的钱数
+        if ($result > $seedbonus * 2) {
+            return $seedbonus * 2;
+        }
+        // 返回还款
+        return $result;
+    } else {
+        return 0.0;
+    }
+}
 
 // 如果没有动作
 if (!$action) {
@@ -417,6 +506,7 @@ if (!$action) {
         print("<form action=\"?action=exchange\" method=\"post\">");
         // 编号
         print("<td class=\"rowhead_center\"><input type=\"hidden\" name=\"option\" value=\"".$i."\" /><b>".($i + 1)."</b></td>");
+        // 名称和价格
         if ($bonusarray['art'] == 'title'){ //for Custom Title!
             $otheroption_title = "<input type=\"text\" name=\"title\" style=\"width: 200px\" maxlength=\"30\" />";
             print("<td class=\"rowfollow\" align='left'><h1>".$bonusarray['name']."</h1>".$bonusarray['description']."<br /><br />".$lang_mybonus['text_enter_titile'].$otheroption_title.$lang_mybonus['text_click_exchange']."</td><td class=\"rowfollow\" align='center'>".number_format($bonusarray['points'])."</td>");
@@ -429,12 +519,40 @@ if (!$action) {
             $otheroption = "<table width=\"100%\"><tr><td class=\"embedded\">".$lang_mybonus['text_ratio_below']."<select name=\"ratiocharity\"> <option value=\"0.1\"> 0.1</option><option value=\"0.2\"> 0.2</option><option value=\"0.3\" selected=\"selected\"> 0.3</option> <option value=\"0.4\"> 0.4</option> <option value=\"0.5\"> 0.5</option> <option value=\"0.6\"> 0.6</option><option value=\"0.7\"> 0.7</option><option value=\"0.8\"> 0.8</option></select>".$lang_mybonus['text_and_downloaded_above']." 10 GB</td><td class=\"embedded\"><b>".$lang_mybonus['text_to_be_given']."</b><select name=\"bonuscharity\" id=\"charityselect\" > <option value=\"1000\"> 1,000</option><option value=\"2000\"> 2,000</option><option value=\"3000\" selected=\"selected\"> 3000</option> <option value=\"5000\"> 5,000</option> <option value=\"8000\"> 8,000</option> <option value=\"10000\"> 10,000</option><option value=\"20000\"> 20,000</option><option value=\"50000\"> 50,000</option></select>".$lang_mybonus['text_karma_points']."</td></tr></table>";
             print("<td class=\"rowfollow\" align='left'><h1>".$bonusarray['name']."</h1>".$bonusarray['description']."<br /><br />".$lang_mybonus['text_select_receiver_ratio']."<br />$otheroption</td><td class=\"rowfollow nowrap\" align='center'>".$lang_mybonus['text_min']."1,000<br />".$lang_mybonus['text_max']."50,000</td>");
         }
+        elseif ($bonusarray['art'] == 'loan') {
+            $otheroption_title = "<input min=\"10000\" max=\"100000\" type=\"number\" name=\"loanBonus\" style=\"width: 200px\" required='true' />";
+            print("<td class=\"rowfollow\" align='left'><h1>".$bonusarray['name']."</h1>".$bonusarray['description']."<br /><br />"."输入你想要的<b>贷款额度</b> ".$otheroption_title." 点击贷款 !"."</td><td class=\"rowfollow\" align='center'>".number_format($bonusarray['points'])."</td>");
+        }
+        elseif ($bonusarray['art'] == 'repayment') {
+            $bonusarray['points'] = totalToRepay($CURUSER['id']);
+            print("<td class=\"rowfollow\" align='left'><h1>".$bonusarray['name']."</h1>".$bonusarray['description']."</td><td class=\"rowfollow\" align='center'>".number_format($bonusarray['points'])."</td>");
+        }
+        elseif ($bonusarray['art'] == 'buyTurnip') {
+            if (getWeekDayNumber() == 7) {
+                $tempInput = "<input min=\"1\" type=\"number\" name=\"buyTurnipNum\" style=\"width: 200px\" required='true' />";
+                print("<td class=\"rowfollow\" align='left'><h1>".$bonusarray['name']."</h1>".$bonusarray['description']
+                    ."<br /><br />"."输入<b>进货数量</b> ".$tempInput." 点击进货 !"
+                    ."</td><td class=\"rowfollow\" align='center'>".number_format($bonusarray['points'])."</td>");
+            } else {
+                print("<td class=\"rowfollow\" align='left'><h1>".$bonusarray['name']."</h1>".$bonusarray['description']."</td><td class=\"rowfollow\" align='center'> </td>");
+            }
+        }
+        elseif ($bonusarray['art'] == 'saleTurnip') {
+            if (getWeekDayNumber() !== 7) {
+                $tempInput = "<input min=\"1\" type=\"number\" name=\"saleTurnipNum\" style=\"width: 200px\" required='true' />";
+                print("<td class=\"rowfollow\" align='left'><h1>".$bonusarray['name']."</h1>".$bonusarray['description']
+                    ."<br /><br />"."输入<b>出售数量</b> ".$tempInput." 点击出售 !"
+                    ."</td><td class=\"rowfollow\" align='center'>".number_format($bonusarray['points'])."</td>");
+            } else {
+                print("<td class=\"rowfollow\" align='left'><h1>".$bonusarray['name']."</h1>".$bonusarray['description']."</td><td class=\"rowfollow\" align='center'> </td>");
+            }
+        }
         else {  //for VIP or Upload
             // 其他项的输出简介的主副标题, 价格
             print("<td class=\"rowfollow\" align='left'><h1>".$bonusarray['name']."</h1>".$bonusarray['description']."</td><td class=\"rowfollow\" align='center'>".number_format($bonusarray['points'])."</td>");
         }
 
-        // 如果魔力值够
+        // 交换的按钮
         if($CURUSER['seedbonus'] >= $bonusarray['points'])
         {
             $permission = 'sendinvite';
@@ -508,6 +626,37 @@ if (!$action) {
                     print("<td class=\"rowfollow\" align=\"center\"><input type=\"submit\" name=\"submit\" value=\"".$lang_mybonus['text_rainbow_id_already_valid_forever']."\" disabled=\"disabled\"/></td>");
                 } else {
                     print("<td class=\"rowfollow\" align=\"center\"><input type=\"submit\" name=\"submit\" value=\"".$lang_mybonus['submit_exchange']."\" /></td>");
+                }
+            }
+            elseif ($bonusarray['art'] == 'loan') {
+                $record = CustomLoanRepayment::where('user_id', $CURUSER['id'])->get();
+                if ($record->isEmpty()) {
+                    print("<td class=\"rowfollow\" align=\"center\"><input type=\"submit\" name=\"submit\" value=\"". "贷款" ."\" /></td>");
+                } else {
+                    print("<td class=\"rowfollow\" align=\"center\"><input type=\"submit\" name=\"submit\" value=\"". "已放贷" ."\" disabled=\"disabled\" /></td>");
+                }
+            }
+            elseif ($bonusarray['art'] == 'repayment') {
+                $record = CustomLoanRepayment::where('user_id', $CURUSER['id'])->get();
+                if ($record->isEmpty()) {
+                    print("<td class=\"rowfollow\" align=\"center\"><input type=\"submit\" name=\"submit\" value=\"". "无债一身轻" ."\" disabled=\"disabled\" /></td>");
+                } else {
+                    print("<td class=\"rowfollow\" align=\"center\"><input type=\"submit\" name=\"submit\" value=\"". "速度还钱" ."\" /></td>");
+                }
+            }
+            elseif ($bonusarray['art'] == 'buyTurnip') {
+                if (getWeekDayNumber() == 7) {
+                    print("<td class=\"rowfollow\" align=\"center\"><input type=\"submit\" name=\"submit\" value=\"". "进货" ."\" /></td>");
+                } else {
+                    print("<td class=\"rowfollow\" align=\"center\"> </td>");
+                }
+
+            }
+            elseif ($bonusarray['art'] == 'saleTurnip') {
+                if (getWeekDayNumber() !== 7) {
+                    print("<td class=\"rowfollow\" align=\"center\"><input type=\"submit\" name=\"submit\" value=\"". "出售" ."\" /></td>");
+                } else {
+                    print("<td class=\"rowfollow\" align=\"center\"> </td>");
                 }
             }
             else {
@@ -623,6 +772,7 @@ if (!$action) {
 
 // 如果动作为交换奖励
 if ($action == "exchange") {
+
     // 作弊处理
     if (isset($_POST["userid"]) || isset($_POST["points"]) || isset($_POST["bonus"]) || isset($_POST["art"]) || !isset($_POST['option']) || !isset($allBonus[$_POST['option']])){
         write_log("User " . $CURUSER["username"] . "," . $CURUSER["ip"] . " is trying to cheat at bonus system",'mod');
@@ -634,7 +784,9 @@ if ($action == "exchange") {
     $points = $bonusarray['points'];
     $userid = $CURUSER['id'];
     $art = $bonusarray['art'];
-
+    if ($art == 'repayment') {
+        $points = totalToRepay($CURUSER['id']);
+    }
     $bonuscomment = $CURUSER['bonuscomment'];
     $seedbonus=$CURUSER['seedbonus']-$points;
 
@@ -827,7 +979,8 @@ if ($action == "exchange") {
                 print("<table width=\"97%\"><tr><td class=\"colhead\" align=\"left\" colspan=\"2\"><h1>".$lang_mybonus['text_oups']."</h1></td></tr>");
                 print("<tr><td align=\"left\"></td><td align=\"left\">".$lang_mybonus['text_not_enough_karma']."<br /><br /></td></tr></table>");
             }
-        } elseif ($art == 'cancel_hr') {
+        }
+        elseif ($art == 'cancel_hr') {
             if (empty($_POST['hr_id'])) {
                 stderr("Error","Invalid H&R ID: " . ($_POST['hr_id'] ?? ''), false, false);
             }
@@ -839,16 +992,44 @@ if ($action == "exchange") {
 //            }
 //            $bonusRep->consumeToBuyMedal($userid, $_POST['medal_id']);
 //            nexus_redirect("" . get_protocol_prefix() . "$BASEURL/mybonus.php?do=buy_medal");
-        } elseif ($art == 'attendance_card') {
+        }
+        elseif ($art == 'attendance_card') {
             $bonusRep->consumeToBuyAttendanceCard($userid);
             nexus_redirect("" . get_protocol_prefix() . "$BASEURL/mybonus.php?do=attendance_card");
-        } elseif ($art == 'rainbow_id') {
+        }
+        elseif ($art == 'rainbow_id') {
             $bonusRep->consumeToBuyRainbowId($userid);
             nexus_redirect("" . get_protocol_prefix() . "$BASEURL/mybonus.php?do=rainbow_id");
-        } elseif ($art == 'change_username_card') {
+        }
+        elseif ($art == 'change_username_card') {
             $bonusRep->consumeToBuyChangeUsernameCard($userid);
             nexus_redirect("" . get_protocol_prefix() . "$BASEURL/mybonus.php?do=change_username_card");
         }
+        elseif ($art == 'loan') {
+            $points = $_POST["loanBonus"];
+            $bonusRep->customLoan($CURUSER['id'], $points, \App\Models\BonusLogs::BUSINESS_TYPE_EXCHANGE_UPLOAD,   $points. " Points for loan.",   []);
+            nexus_redirect("" . get_protocol_prefix() . "$BASEURL/mybonus.php?do=loan_success");
+        }
+        elseif ($art == 'repayment') {
+            $bonusRep->customRepayment($CURUSER['id'], $points, \App\Models\BonusLogs::BUSINESS_TYPE_EXCHANGE_UPLOAD,   $points. " Points for repayment.",   []);
+            nexus_redirect("" . get_protocol_prefix() . "$BASEURL/mybonus.php?do=repayment_success");
+        }
+        elseif ($art == 'buyTurnip') {
+            $buyTurnipNum = $_POST["buyTurnipNum"];
+            echo $buyTurnipNum;
+            if ($CURUSER['seedbonus'] < $buyTurnipNum * $points) {
+                nexus_redirect("" . get_protocol_prefix() . "$BASEURL/mybonus.php?do=buy_turnip_failed");
+            } else {
+                nexus_redirect("" . get_protocol_prefix() . "$BASEURL/mybonus.php?do=buy_turnip_success");
+            }
+        }
+        elseif ($art == 'saleTurnip') {
+            $saleTurnipNum = $_POST["saleTurnipNum"];
+            echo $saleTurnipNum;
+            nexus_redirect("" . get_protocol_prefix() . "$BASEURL/mybonus.php?do=sale_turnip_success");
+        }
+    } else {
+        print("不知道为什么钱不够");
     }
 }
 
