@@ -53,18 +53,13 @@ function bonusarray($option = 0){
 
     // 查一下当前持仓
     global $CURUSER;
-    $countCurrentTurnip = 666;
-    $tempTime = date('Y-m-d 00:00:00', strtotime(date('Y-m-d')));
-    echo "<h2>$tempTime</h2>";
+    $countCurrentTurnip = 0;
     $oldRecord = NexusDB::table("custom_turnip")
         ->where('user_id', $CURUSER['id'])
         ->where('created_at', '>', getLastSunday())
         ->first();
     if ($oldRecord !== null) {
-        echo "<h2>查到了</h2>";
         $countCurrentTurnip = $oldRecord->number;
-    } else {
-        echo "<h2>没查到</h2>";
     }
 
     // 进货 象岛农庄
@@ -80,6 +75,7 @@ function bonusarray($option = 0){
         $bonus['name'] = "象岛农庄 【科学种植中 - 等待收获】";
         $bonus['description'] = "每周日新的流行农产品成熟，小象可以来这里批发进货";
     }
+    $bonus['maxNum'] = intval($CURUSER['seedbonus'] / $turnipDaily['price']);
     $results[] = $bonus;
 
     // 出售
@@ -87,7 +83,6 @@ function bonusarray($option = 0){
     $bonus['points'] = $turnipDaily['price'];
     $bonus['art'] = 'saleTurnip'; // type
     $bonus['menge'] = 0;
-
     if (getWeekDayNumber() == 7) {
         $bonus['name'] = "小象新鲜蔬菜店 【休息日】 ".$turnipDaily['name']."库存：".$countCurrentTurnip;
         $bonus['description'] = "岛民都在家看硬盘里的影视资源，没人来买东西了";
@@ -95,6 +90,7 @@ function bonusarray($option = 0){
         $bonus['name'] = "小象新鲜蔬菜店 【市场单价：".$turnipDaily['price']."】 ".$turnipDaily['name']."库存：".$countCurrentTurnip;
         $bonus['description'] = $turnipDaily['name']."~ ".$turnipDaily['name']."~ "."能涨价就太好了~~";
     }
+    $bonus['maxNum'] = $countCurrentTurnip;
     $results[] = $bonus;
 
     //借款
@@ -563,7 +559,7 @@ if (!$action) {
         }
         elseif ($bonusarray['art'] == 'buyTurnip') {
             if (getWeekDayNumber() == 7) {
-                $tempInput = "<input min=\"1\" type=\"number\" name=\"buyTurnipNum\" style=\"width: 200px\" required='true' />";
+                $tempInput = "<input min='1' max=\"".$bonusarray['maxNum']."\" type=\"number\" name=\"buyTurnipNum\" style=\"width: 200px\" required='true' />";
                 print("<td class=\"rowfollow\" align='left'><h1>".$bonusarray['name']."</h1>".$bonusarray['description']
                     ."<br /><br />"."输入<b>进货数量</b> ".$tempInput." 点击进货 !"
                     ."</td><td class=\"rowfollow\" align='center'>".number_format($bonusarray['points'])."</td>");
@@ -573,7 +569,7 @@ if (!$action) {
         }
         elseif ($bonusarray['art'] == 'saleTurnip') {
             if (getWeekDayNumber() !== 7) {
-                $tempInput = "<input min=\"1\" type=\"number\" name=\"saleTurnipNum\" style=\"width: 200px\" required='true' />";
+                $tempInput = "<input min='1' max=\"".$bonusarray['maxNum']."\" type=\"number\" name=\"saleTurnipNum\" style=\"width: 200px\" required='true' />";
                 print("<td class=\"rowfollow\" align='left'><h1>".$bonusarray['name']."</h1>".$bonusarray['description']
                     ."<br /><br />"."输入<b>出售数量</b> ".$tempInput." 点击出售 !"
                     ."</td><td class=\"rowfollow\" align='center'>".number_format($bonusarray['points'])."</td>");
@@ -587,7 +583,16 @@ if (!$action) {
         }
 
         // 交换的按钮
-        if($CURUSER['seedbonus'] >= $bonusarray['points'])
+        // [卖出类型按钮]
+        if ($bonusarray['art'] == 'saleTurnip') {
+            if (getWeekDayNumber() !== 7) {
+                print("<td class=\"rowfollow\" align=\"center\"><input type=\"submit\" name=\"submit\" value=\"". "出售" ."\" /></td>");
+            } else {
+                print("<td class=\"rowfollow\" align=\"center\"> </td>");
+            }
+        }
+        // [消费类型按钮]
+        else if($CURUSER['seedbonus'] >= $bonusarray['points'])
         {
             $permission = 'sendinvite';
             if ($bonusarray['art'] == 'gift_1'){
@@ -686,20 +691,12 @@ if (!$action) {
                 }
 
             }
-            elseif ($bonusarray['art'] == 'saleTurnip') {
-                if (getWeekDayNumber() !== 7) {
-                    print("<td class=\"rowfollow\" align=\"center\"><input type=\"submit\" name=\"submit\" value=\"". "出售" ."\" /></td>");
-                } else {
-                    print("<td class=\"rowfollow\" align=\"center\"> </td>");
-                }
-            }
             else {
                 print("<td class=\"rowfollow\" align=\"center\"><input type=\"submit\" name=\"submit\" value=\"".$lang_mybonus['submit_exchange']."\" /></td>");
             }
         }
-        else
-        {
-            // 需要更多魔力值
+        else {
+            // 消费类按钮的魔力值不够
             print("<td class=\"rowfollow\" align=\"center\"><input type=\"submit\" name=\"submit\" value=\"".$lang_mybonus['text_more_points_needed']."\" disabled=\"disabled\" /></td>");
         }
         print("</form>");
@@ -824,8 +821,15 @@ if ($action == "exchange") {
     $bonuscomment = $CURUSER['bonuscomment'];
     $seedbonus=$CURUSER['seedbonus']-$points;
 
-    if($CURUSER['seedbonus'] >= $points) {
-        $bonusRep = new \App\Repositories\BonusRepository();
+    $bonusRep = new \App\Repositories\BonusRepository();
+    // [出售型]
+    if ($art == 'saleTurnip') {
+        $saleTurnipNum = $_POST["saleTurnipNum"];
+        $bonusRep->customSaleTurnip($CURUSER['id'], $points, $saleTurnipNum, \App\Models\BonusLogs::BUSINESS_TYPE_EXCHANGE_UPLOAD,   $points. " Points for sale turnip.",   []);
+        nexus_redirect("" . get_protocol_prefix() . "$BASEURL/mybonus.php?do=sale_turnip_success");
+    }
+    // [消费型]
+    elseif($CURUSER['seedbonus'] >= $points) {
         $lockName = "user:$userid:exchange:bonus";
         $lock = new \Nexus\Database\NexusLock($lockName, $lockSeconds);
         if (!$lock->get()) {
@@ -1055,15 +1059,9 @@ if ($action == "exchange") {
                 nexus_redirect("" . get_protocol_prefix() . "$BASEURL/mybonus.php?do=buy_turnip_failed");
             } else {
                 // 够
-                $bonusRep->customBuyTurnip($CURUSER['id'], $points, $buyTurnipNum, \App\Models\BonusLogs::BUSINESS_TYPE_EXCHANGE_UPLOAD,   $points. " Points for loan.",   []);
+                $bonusRep->customBuyTurnip($CURUSER['id'], $points, $buyTurnipNum, \App\Models\BonusLogs::BUSINESS_TYPE_EXCHANGE_UPLOAD,   $points. " Points for buy turnip.",   []);
                 nexus_redirect("" . get_protocol_prefix() . "$BASEURL/mybonus.php?do=buy_turnip_success");
             }
-        }
-        elseif ($art == 'saleTurnip') {
-            // todo 检测库存够不够
-            $saleTurnipNum = $_POST["saleTurnipNum"];
-            $bonusRep->customSaleTurnip($CURUSER['id'], $points, $saleTurnipNum, \App\Models\BonusLogs::BUSINESS_TYPE_EXCHANGE_UPLOAD,   $points. " Points for loan.",   []);
-            nexus_redirect("" . get_protocol_prefix() . "$BASEURL/mybonus.php?do=sale_turnip_success");
         }
     } else {
         print("不知道为什么钱不够");

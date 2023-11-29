@@ -568,7 +568,7 @@ class BonusRepository extends BaseRepository
                 throw new \RuntimeException("Update user seedbonus fail.");
             }
             // 入库或更新custom_turnip表
-            $oldRecord = NexusDB::table("custom_turnip")->where('user_id', $user->id)->first();
+            $oldRecord = NexusDB::table("custom_turnip")->where('user_id', $user->id)->where('created_at', '>', getLastSunday())->first();
             if ($oldRecord === null) {
                 $tmpDate = date('Y-m-d H:i:s');
                 NexusDB::table("custom_turnip")->insert([
@@ -583,13 +583,11 @@ class BonusRepository extends BaseRepository
                     'seedbonus' => 0.0,
                 ]);
             } else {
-                print("oldRecordNumber=" . $oldRecord->number);
-                print("num=" . $num);
                 $turnipUpdate = [];
                 $turnipUpdate['number'] = $oldRecord->number + $num;
                 $turnipUpdate['updated_at'] = now()->toDateTimeString();
                 NexusDB::table("custom_turnip")
-                    ->where('user_id', $user->id)->update($turnipUpdate);
+                    ->where('user_id', $user->id)->where('created_at', '>', getLastSunday())->update($turnipUpdate);
             }
             // 日志插入数据表bonus_logs
             $nowStr = now()->toDateTimeString();
@@ -613,6 +611,95 @@ class BonusRepository extends BaseRepository
 
     // 出售
     public function customSaleTurnip($user, $requireBonus, $num, $logBusinessType, $logComment = '', array $userUpdates = []) {
+        // 各种异常
+        if (!isset(BonusLogs::$businessTypes[$logBusinessType])) {
+            throw new \InvalidArgumentException("Invalid logBusinessType: $logBusinessType");
+        }
+        if (isset($userUpdates['seedbonus']) || isset($userUpdates['bonuscomment'])) {
+            throw new \InvalidArgumentException("Not support update seedbonus or bonuscomment");
+        }
+        // 获取用户对象
+        $user = $this->getUser($user);
+        // MySQL事务
+        NexusDB::transaction(function () use ($user, $requireBonus, $num, $logBusinessType, $logComment, $userUpdates) {
+            // 反斜杠转义
+            $logComment = addslashes($logComment);
+            // 前加年月日-
+            $bonusComment = date('Y-m-d') . " - $logComment";
+            // 用户原有魔力
+            $oldUserBonus = $user->seedbonus;
+            // 商品出售后有魔力(浮点数相加)
+            $newUserBonus = bcadd($oldUserBonus, $requireBonus*$num);
+            // 日志信息构建和输出内部日志
+            $log = "user: {$user->id}, requireBonus: $requireBonus, oldUserBonus: $oldUserBonus, newUserBonus: $newUserBonus, logBusinessType: $logBusinessType, logComment: $logComment";
+            // 后台日志输出 /tmp/nexus/nexus-20231125.txt
+            do_log($log);
+            // 构建update对象
+            // 参数1 用户新的魔力值
+            $userUpdates['seedbonus'] = $newUserBonus;
+            // 参数2 追加新记录到bonuscomment的前面，bounscomment是一个文档包括多行， 新纪录往前面加一行
+            $userUpdates['bonuscomment'] = NexusDB::raw("if(bonuscomment = '', '$bonusComment', concat_ws('\n', '$bonusComment', bonuscomment))");
+            // 执行sql更新用户表
+            $affectedRows = NexusDB::table($user->getTable())
+                ->where('id', $user->id)
+                ->where('seedbonus', $oldUserBonus)
+                ->update($userUpdates);
+            if ($affectedRows != 1) {
+                // 超时了或者错误了
+                do_log("update user seedbonus affected rows != 1, query: " . last_query(), 'error');
+                throw new \RuntimeException("Update user seedbonus fail.");
+            }
+            // 处理custom_turnip表
+            $oldRecord = NexusDB::table("custom_turnip")->where('user_id', $user->id)->where('created_at', '>', getLastSunday())->first();
+            // 没数据
+            if ($oldRecord === null) {
+                NexusDB::rollback(); // 手动回滚事务
+                return; // 退出事务
+            }
+            // 数量不够
+            elseif($oldRecord->number < $num) {
+                NexusDB::rollback(); // 手动回滚事务
+                return; // 退出事务
+            }
+            // 正常减少库存
+            else {
+                $turnipUpdate = [];
+                $turnipUpdate['number'] = $oldRecord->number - $num;
+                $turnipUpdate['updated_at'] = now()->toDateTimeString();
+                NexusDB::table("custom_turnip")
+                    ->where('user_id', $user->id)->where('created_at', '>', getLastSunday())->update($turnipUpdate);
+            }
+            // 日志插入数据表bonus_logs
+            $nowStr = now()->toDateTimeString();
+            $bonusLog = [
+                'business_type' => $logBusinessType,
+                'uid' => $user->id,
+                'old_total_value' => $oldUserBonus,
+                'value' => $requireBonus,
+                'new_total_value' => $newUserBonus,
+                'comment' => sprintf('[%s] %s', BonusLogs::$businessTypes[$logBusinessType]['text'], $logComment),
+                'created_at' => $nowStr,
+                'updated_at' => $nowStr,
+            ];
+            BonusLogs::query()->insert($bonusLog);
+            // 系统日志
+            do_log("bonusLog: " . nexus_json_encode($bonusLog));
+            // 清除缓存
+            clear_user_cache($user->id, $user->passkey);
+        });
+    }
 
+    function getLastSunday() {
+        $today = date('Y-m-d');
+        $previousWeekend = date('Y-m-d', strtotime('last Sunday', strtotime($today)));
+
+        if (date('N', strtotime($today)) == 7) {
+            // 如果今天是周末，则使用今天的日期
+            $startTime = $today . ' 00:00:00';
+        } else {
+            // 如果今天不是周末，则使用上一个周末的日期
+            $startTime = $previousWeekend . ' 00:00:00';
+        }
+        return $startTime;
     }
 }

@@ -1,0 +1,36 @@
+索引数组：
+索引数组使用数字索引来访问数组元素。索引从 0 开始，依次递增。你可以使用整数索引访问和操作数组中的元素。
+php
+$fruits = array("Apple", "Banana", "Orange");
+echo $fruits[0];  // 输出 "Apple"
+echo $fruits[1];  // 输出 "Banana"
+echo $fruits[2];  // 输出 "Orange"
+
+关联数组：
+关联数组使用字符串键来访问数组元素。每个元素都有一个唯一的键与之关联。你可以使用字符串键访问和操作数组中的元素。
+php
+$person = array(
+    "name" => "John",
+    "age" => 30,
+    "city" => "New York"
+);
+echo $person["name"];  // 输出 "John"
+echo $person["age"];   // 输出 30
+echo $person["city"];  // 输出 "New York"
+
+
+类和对象
+定义类
+class Person {
+    public $name;
+    public $age;
+    public function sayHello() {
+        echo "Hello, my name is ".$this->name;
+    }
+}
+定义对象
+$person = new Person();
+赋值和取用
+$person->name = "John";
+echo $person->name;  // 输出 "John"
+$person->sayHello();  // 输出 "Hello, my name is John"
