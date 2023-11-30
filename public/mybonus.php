@@ -1,6 +1,5 @@
 <?php
 
-use App\Models\CustomLoanRepayment;
 use Nexus\Database\NexusDB;
 use Carbon\Carbon;
 
@@ -29,6 +28,17 @@ function getLastSunday() {
     }
     return $startTime;
 }
+function getMaxProfit() {
+    return 500000;
+}
+function getProfit() {
+    global $CURUSER;
+    $profit = NexusDB::table("custom_turnip_profit")->where("user_id", $CURUSER['id'])->first();
+    if($profit === null) {
+        return 0;
+    }
+    return $profit->price;
+}
 
 function getTodayTurnip() {
     date_default_timezone_set('Asia/Shanghai');//设置时区为上海
@@ -40,11 +50,12 @@ function getTodayTurnip() {
         $date_str = date('Y-m-d 12:00:00', $pm_timestamp);
     }
 //    echo $date_str;
-    $queryCalendarResult = \App\Models\CustomTurnipCalendar::query()->where('date', $date_str)->first();
+    $queryCalendarResult = NexusDB::table("custom_turnip_calendar")->where('date', $date_str)->first();
     return $queryCalendarResult;
 }
 function bonusarray($option = 0){
     $turnipDaily = getTodayTurnip();
+    $profit = getProfit();
 
     global $onegbupload_bonus,$fivegbupload_bonus,$tengbupload_bonus,$oneinvite_bonus,$customtitle_bonus,$vipstatus_bonus, $basictax_bonus, $taxpercentage_bonus, $bonusnoadpoint_advertisement, $bonusnoadtime_advertisement;
     global $lang_mybonus;
@@ -67,30 +78,42 @@ function bonusarray($option = 0){
     $bonus['art'] = 'buyTurnip'; // type
     $bonus['menge'] = 0; // 1gb的字节数
     if (getWeekDayNumber() == 7) {
-        $bonus['points'] = $turnipDaily['price'];
-        $bonus['name'] = "象岛农庄 【" . $turnipDaily['name'] . " - 作物成熟 - 开售中】";
-        $bonus['description'] = $turnipDaily['name']."的价格是".$turnipDaily['price']."，保质期至下周六晚上，要马上进货吗？";
+        $bonus['points'] = $turnipDaily->price;
+        $bonus['name'] = "象岛农庄 【" . $turnipDaily->name . " - 作物成熟 - 开售中】";
+        $bonus['description'] = $turnipDaily->name."的价格是".$turnipDaily->price."，保质期至下周六晚上，要马上进货吗？";
     } else {
         $bonus['points'] = 0;
-        $bonus['name'] = "象岛农庄 【科学种植中 - 等待收获】";
-        $bonus['description'] = "每周日新的流行农产品成熟，小象可以来这里批发进货";
+        $bonus['name'] = "象岛农庄 【科学种植中 - 等待成熟】";
+        $bonus['description'] = "每周日新的流行农作物成熟，小象可以来这里批发进货";
     }
-    $bonus['maxNum'] = intval($CURUSER['seedbonus'] / $turnipDaily['price']);
+    $bonus['maxNum'] = intval($CURUSER['seedbonus'] / $turnipDaily->price);
+    $bonus['finishTarget'] = 0;
+    if (getMaxProfit() <= $profit) {
+        $bonus['finishTarget'] = 1;
+    }
     $results[] = $bonus;
 
     // 出售
     $bonus = array();
-    $bonus['points'] = $turnipDaily['price'];
+    $bonus['points'] = $turnipDaily->price;
     $bonus['art'] = 'saleTurnip'; // type
     $bonus['menge'] = 0;
     if (getWeekDayNumber() == 7) {
-        $bonus['name'] = "小象新鲜蔬菜店 【休息日】 ".$turnipDaily['name']."库存：".$countCurrentTurnip;
+        $bonus['name'] = "小象新鲜蔬菜店 【休息日】 ".$turnipDaily->name."库存：".$countCurrentTurnip." 成本：".$oldRecord->price;
         $bonus['description'] = "岛民都在家看硬盘里的影视资源，没人来买东西了";
     } else {
-        $bonus['name'] = "小象新鲜蔬菜店 【市场单价：".$turnipDaily['price']."】 ".$turnipDaily['name']."库存：".$countCurrentTurnip;
-        $bonus['description'] = $turnipDaily['name']."~ ".$turnipDaily['name']."~ "."能涨价就太好了~~";
+        $bonus['name'] = "小象新鲜蔬菜店 【".$turnipDaily->name."<b class='rainbow'> 市场单价：".$turnipDaily->price."</b> "."库存：".$countCurrentTurnip." 成本：".$oldRecord->price."】";
+        $bonus['description'] = $turnipDaily->name."~ ".$turnipDaily->name."~ "."能涨价就太好了~~  开店累计盈利 ".$profit." 盈利目标 ".getMaxProfit()."(净利润)";
     }
-    $bonus['maxNum'] = $countCurrentTurnip;
+    $userCanProfit = bcsub(getMaxProfit(), $profit);
+    $userProfitOneProduct = bcsub($turnipDaily->price, $oldRecord->price);
+    $profitNum = bcdiv($userCanProfit, $userProfitOneProduct, 0) + 1;
+    // 大于进货价时, 只需要考虑
+    if ($turnipDaily->price > $oldRecord->price) {
+        $bonus['maxNum'] = min($countCurrentTurnip, $profitNum);
+    } else {
+        $bonus['maxNum'] = $countCurrentTurnip;
+    }
     $results[] = $bonus;
 
     //借款
@@ -472,12 +495,11 @@ stdhead($CURUSER['username'] . $lang_mybonus['head_karma_page']);
 $bonus = number_format($CURUSER['seedbonus'], 1);
 
 function totalToRepay($userid) {
-    $loanInfo = CustomLoanRepayment::query()->where('user_id', $userid)->get();
-    if ($loanInfo->isNotEmpty()) {
-        // print($loanInfo);
+    $loanInfo = NexusDB::table('custom_loan_repayment')->where('user_id', $userid)->first();
+    if ($loanInfo !== null) {
         // 计算贷款总利息
-        $seedbonus = $loanInfo[0]['seedbonus']; // 贷款的钱数
-        $createdAt = strtotime($loanInfo[0]['created_at']); // 贷款开始时间的时间戳
+        $seedbonus = $loanInfo->seedbonus; // 贷款的钱数
+        $createdAt = strtotime($loanInfo->created_at); // 贷款开始时间的时间戳
         $today = time(); // 今天的时间戳
         $daysPassed = floor(($today - $createdAt) / (60 * 60 * 24)); // 已经过去的天数
         $totalInterest = $seedbonus * pow(1.02, $daysPassed) - $seedbonus; // 总利息
@@ -496,7 +518,7 @@ function totalToRepay($userid) {
 // 如果没有动作
 if (!$action) {
     // 开始构建兑换奖励的表格
-    print("<table align=\"center\" width=\"97%\" border=\"1\" cellspacing=\"0\" cellpadding=\"3\">\n");
+    print("<table id='customMybonus' align=\"center\" width=\"97%\" border=\"1\" cellspacing=\"0\" cellpadding=\"3\">\n");
     // NexusPHP魔力值系统
     print("<tr><td class=\"colhead\" colspan=\"4\" align=\"center\"><font class=\"big\">".$SITENAME.$lang_mybonus['text_karma_system']."</font></td></tr>\n");
     // 如果有信息, 则输出信息
@@ -559,7 +581,11 @@ if (!$action) {
         }
         elseif ($bonusarray['art'] == 'buyTurnip') {
             if (getWeekDayNumber() == 7) {
-                $tempInput = "<input min='1' max=\"".$bonusarray['maxNum']."\" type=\"number\" name=\"buyTurnipNum\" style=\"width: 200px\" required='true' />";
+                $disable = "";
+                if ($bonusarray['maxNum'] == 0) {
+                    $disable = "disabled";
+                }
+                $tempInput = "<input min='1' max=\"".$bonusarray['maxNum']."\" type=\"number\" name=\"buyTurnipNum\" style=\"width: 200px\" required='true' ".$disable."/>";
                 print("<td class=\"rowfollow\" align='left'><h1>".$bonusarray['name']."</h1>".$bonusarray['description']
                     ."<br /><br />"."输入<b>进货数量</b> ".$tempInput." 点击进货 !"
                     ."</td><td class=\"rowfollow\" align='center'>".number_format($bonusarray['points'])."</td>");
@@ -569,9 +595,13 @@ if (!$action) {
         }
         elseif ($bonusarray['art'] == 'saleTurnip') {
             if (getWeekDayNumber() !== 7) {
-                $tempInput = "<input min='1' max=\"".$bonusarray['maxNum']."\" type=\"number\" name=\"saleTurnipNum\" style=\"width: 200px\" required='true' />";
+                $disable = "";
+                if ($bonusarray['maxNum'] == 0) {
+                    $disable = "disabled";
+                }
+                $tempInput = "<input min='1' max=\"".$bonusarray['maxNum']."\" type=\"number\" name=\"saleTurnipNum\" style=\"width: 200px\" required='true' ".$disable."/>";
                 print("<td class=\"rowfollow\" align='left'><h1>".$bonusarray['name']."</h1>".$bonusarray['description']
-                    ."<br /><br />"."输入<b>出售数量</b> ".$tempInput." 点击出售 !"
+                    ."<br /><br />"."输入<b>出售数量</b> ".$tempInput." 点击出售 ! (超过盈利目标后多余的库存会自动原价卖出)"
                     ."</td><td class=\"rowfollow\" align='center'>".number_format($bonusarray['points'])."</td>");
             } else {
                 print("<td class=\"rowfollow\" align='left'><h1>".$bonusarray['name']."</h1>".$bonusarray['description']."</td><td class=\"rowfollow\" align='center'> </td>");
@@ -586,7 +616,11 @@ if (!$action) {
         // [卖出类型按钮]
         if ($bonusarray['art'] == 'saleTurnip') {
             if (getWeekDayNumber() !== 7) {
-                print("<td class=\"rowfollow\" align=\"center\"><input type=\"submit\" name=\"submit\" value=\"". "出售" ."\" /></td>");
+                $disable = "";
+                if ($bonusarray['maxNum'] == 0) {
+                    $disable = "disabled";
+                }
+                print("<td class=\"rowfollow\" align=\"center\"><input type=\"submit\" name=\"submit\" value=\"". "出售" ."\" ".$disable."/></td>");
             } else {
                 print("<td class=\"rowfollow\" align=\"center\"> </td>");
             }
@@ -668,7 +702,7 @@ if (!$action) {
                 }
             }
             elseif ($bonusarray['art'] == 'loan') {
-                $record = CustomLoanRepayment::where('user_id', $CURUSER['id'])->get();
+                $record = NexusDB::table('custom_loan_repayment')->where('user_id', $CURUSER['id'])->get();
                 if ($record->isEmpty()) {
                     print("<td class=\"rowfollow\" align=\"center\"><input type=\"submit\" name=\"submit\" value=\"". "贷款" ."\" /></td>");
                 } else {
@@ -676,7 +710,7 @@ if (!$action) {
                 }
             }
             elseif ($bonusarray['art'] == 'repayment') {
-                $record = CustomLoanRepayment::where('user_id', $CURUSER['id'])->get();
+                $record = NexusDB::table('custom_loan_repayment')->where('user_id', $CURUSER['id'])->get();
                 if ($record->isEmpty()) {
                     print("<td class=\"rowfollow\" align=\"center\"><input type=\"submit\" name=\"submit\" value=\"". "无债一身轻" ."\" disabled=\"disabled\" /></td>");
                 } else {
@@ -684,7 +718,10 @@ if (!$action) {
                 }
             }
             elseif ($bonusarray['art'] == 'buyTurnip') {
-                if (getWeekDayNumber() == 7) {
+                if ($bonusarray['finishTarget'] == 1) {
+                    print("<td class=\"rowfollow\" align=\"center\">盈利目标已达成</td>");
+                }
+                elseif (getWeekDayNumber() == 7) {
                     print("<td class=\"rowfollow\" align=\"center\"><input type=\"submit\" name=\"submit\" value=\"". "进货" ."\" /></td>");
                 } else {
                     print("<td class=\"rowfollow\" align=\"center\"> </td>");

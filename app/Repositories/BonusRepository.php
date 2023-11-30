@@ -3,7 +3,6 @@ namespace App\Repositories;
 
 use App\Exceptions\NexusException;
 use App\Models\BonusLogs;
-use App\Models\CustomLoanRepayment;
 use App\Models\HitAndRun;
 use App\Models\Invite;
 use App\Models\Medal;
@@ -439,7 +438,7 @@ class BonusRepository extends BaseRepository
                 'seedbonus' => $requireBonus,
                 'comment' => 'loan [' . $requireBonus . '] seedbonus.'
             ];
-            CustomLoanRepayment::query()->insert($loanDO);
+            NexusDB::table('custom_loan_repayment')->insert($loanDO);
             // 系统日志
             do_log("bonusLog: " . nexus_json_encode($bonusLog));
             // 清除缓存
@@ -510,8 +509,7 @@ class BonusRepository extends BaseRepository
             // 插入数据表bonus_logs
             BonusLogs::query()->insert($bonusLog);
             // 删除贷款记录
-            $record = CustomLoanRepayment::query() -> where("user_id", $user->id);
-            $record->delete();
+            NexusDB::table('custom_loan_repayment')-> where("user_id", $user->id)->delete();
             // 系统日志
             do_log("bonusLog: " . nexus_json_encode($bonusLog));
             // 清除缓存
@@ -610,6 +608,8 @@ class BonusRepository extends BaseRepository
     }
 
     // 出售
+    // 目标10元 单价3元 数量max=10/3+1=4最大卖四个
+    // 界面直接限制交易数量, 后端正常处理, 前端超过盈利上限直接禁止按按钮了, 后端发现超过盈利上限, 直接自动卖掉剩余的 (后端为了保险保底如果盈利超过额外10万了直接报错就好)
     public function customSaleTurnip($user, $requireBonus, $num, $logBusinessType, $logComment = '', array $userUpdates = []) {
         // 各种异常
         if (!isset(BonusLogs::$businessTypes[$logBusinessType])) {
@@ -622,14 +622,50 @@ class BonusRepository extends BaseRepository
         $user = $this->getUser($user);
         // MySQL事务
         NexusDB::transaction(function () use ($user, $requireBonus, $num, $logBusinessType, $logComment, $userUpdates) {
-            // 反斜杠转义
-            $logComment = addslashes($logComment);
-            // 前加年月日-
-            $bonusComment = date('Y-m-d') . " - $logComment";
+            // 获取持仓信息
+            $oldRecord = NexusDB::table("custom_turnip")->where('user_id', $user->id)->where('created_at', '>', getLastSunday())->first();
+            // 计算此次交易盈利多少钱
+            $profitThisTime = bcmul($num, bcsub($requireBonus, $oldRecord->price));
+            // 处理盈利表
+            $oldProfitObject = NexusDB::table("custom_turnip_profit")->where("user_id", $user->id)->first();
+            $profitAll = 0;
+            if ($oldProfitObject === null) {
+                $profitAll = $profitThisTime;
+                // 插入盈利信息
+                NexusDB::table("custom_turnip_profit")->insert([
+                    'id' => time(),
+                    'username' => $user->username,
+                    'user_id' => $user->id,
+                    'comment' => 'create profit price=' . $profitThisTime,
+                    'price' => $profitAll,
+                    'created_at' => time(),
+                    'updated_at' => time()
+                ]);
+            } else {
+                $profitAll = bcadd($oldProfitObject->price, $profitThisTime);
+                // 更新盈利信息
+                NexusDB::table("custom_turnip_profit")->where('user_id', $user->id)->update([
+                    'comment' => 'create profit price=' . $profitThisTime . "\n" . $oldProfitObject->comment,
+                    'price' => $profitAll,
+                    'updated_at' => time()
+                ]);
+            }
             // 用户原有魔力
             $oldUserBonus = $user->seedbonus;
             // 商品出售后有魔力(浮点数相加)
             $newUserBonus = bcadd($oldUserBonus, $requireBonus*$num);
+            // 库存更改为多少
+            $subOldRecordNumber = $oldRecord->number - $num;
+            // 如果达到盈利目标, 直接自动平仓掉剩余仓位
+            if ($this->getMaxProfit() <= $profitAll) {
+                $newUserBonus = bcadd($newUserBonus, bcmul(($oldRecord->number - $num), $oldRecord->price));
+                $subOldRecordNumber = 0;
+            }
+
+            // 反斜杠转义
+            $logComment = addslashes($logComment);
+            // 前加年月日-
+            $bonusComment = date('Y-m-d') . " - $logComment";
             // 日志信息构建和输出内部日志
             $log = "user: {$user->id}, requireBonus: $requireBonus, oldUserBonus: $oldUserBonus, newUserBonus: $newUserBonus, logBusinessType: $logBusinessType, logComment: $logComment";
             // 后台日志输出 /tmp/nexus/nexus-20231125.txt
@@ -649,8 +685,6 @@ class BonusRepository extends BaseRepository
                 do_log("update user seedbonus affected rows != 1, query: " . last_query(), 'error');
                 throw new \RuntimeException("Update user seedbonus fail.");
             }
-            // 处理custom_turnip表
-            $oldRecord = NexusDB::table("custom_turnip")->where('user_id', $user->id)->where('created_at', '>', getLastSunday())->first();
             // 没数据
             if ($oldRecord === null) {
                 NexusDB::rollback(); // 手动回滚事务
@@ -664,11 +698,14 @@ class BonusRepository extends BaseRepository
             // 正常减少库存
             else {
                 $turnipUpdate = [];
-                $turnipUpdate['number'] = $oldRecord->number - $num;
+                $turnipUpdate['number'] = $subOldRecordNumber;
                 $turnipUpdate['updated_at'] = now()->toDateTimeString();
                 NexusDB::table("custom_turnip")
                     ->where('user_id', $user->id)->where('created_at', '>', getLastSunday())->update($turnipUpdate);
             }
+
+
+
             // 日志插入数据表bonus_logs
             $nowStr = now()->toDateTimeString();
             $bonusLog = [
@@ -701,5 +738,9 @@ class BonusRepository extends BaseRepository
             $startTime = $previousWeekend . ' 00:00:00';
         }
         return $startTime;
+    }
+
+    function getMaxProfit() {
+        return 500000;
     }
 }
