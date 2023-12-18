@@ -9,17 +9,24 @@ require_once(get_langfile_path());
 require(get_langfile_path("",true));
 loggedinorreturn();
 parked();
+// 定义对象
+$teamDao = new \App\Repositories\CustomTeamRepository();
+$turnipDaily = getTodayTurnip();
+function getMaxLoan() {
+    return 300000;
+}
 
 function getWeekDayNumber() {
     return date('N');
-//    return 7;
+//    return "7";
+//    return "6";
 }
 
 function getLastSunday() {
     $today = date('Y-m-d');
     $previousWeekend = date('Y-m-d', strtotime('last Sunday', strtotime($today)));
 
-    if (date('N', strtotime($today)) == 7) {
+    if (date('N', strtotime($today)) == "7") {
         // 如果今天是周末，则使用今天的日期
         $startTime = $today . ' 00:00:00';
     } else {
@@ -39,7 +46,6 @@ function getProfit() {
     }
     return $profit->price;
 }
-
 function getTodayTurnip() {
     date_default_timezone_set('Asia/Shanghai');//设置时区为上海
     $am_timestamp = strtotime(date('Y-m-d'));//获取当前时间的0点时间戳
@@ -53,33 +59,153 @@ function getTodayTurnip() {
     $queryCalendarResult = NexusDB::table("custom_turnip_calendar")->where('date', $date_str)->first();
     return $queryCalendarResult;
 }
-function bonusarray($option = 0){
-    $turnipDaily = getTodayTurnip();
-    $profit = getProfit();
-
-    global $onegbupload_bonus,$fivegbupload_bonus,$tengbupload_bonus,$oneinvite_bonus,$customtitle_bonus,$vipstatus_bonus, $basictax_bonus, $taxpercentage_bonus, $bonusnoadpoint_advertisement, $bonusnoadtime_advertisement;
-    global $lang_mybonus;
-
-    $results = [];
-
-    // 查一下当前持仓
+function getTurnip() {
     global $CURUSER;
-    $countCurrentTurnip = 0;
     $oldRecord = NexusDB::table("custom_turnip")
         ->where('user_id', $CURUSER['id'])
         ->where('created_at', '>', getLastSunday())
         ->first();
-    if ($oldRecord !== null) {
-        $countCurrentTurnip = $oldRecord->number;
+    return $oldRecord;
+}
+function totalToRepay($userid) {
+    $loanInfo = NexusDB::table('custom_loan_repayment')->where('user_id', $userid)->first();
+    if ($loanInfo !== null) {
+        // 计算贷款总利息
+        $seedbonus = $loanInfo->seedbonus; // 贷款的钱数
+        $createdAt = strtotime($loanInfo->created_at); // 贷款开始时间的时间戳
+        $today = time(); // 今天的时间戳
+        $daysPassed = floor(($today - $createdAt) / (60 * 60 * 24)); // 已经过去的天数
+        $totalInterest = $seedbonus * pow(1.02, $daysPassed) - $seedbonus; // 总利息
+        // 计算用户今天需要还款的总额
+        $result = $seedbonus + $totalInterest; // 总共需要还的钱数
+        if ($result > $seedbonus * 2) {
+            return $seedbonus * 2;
+        }
+        // 返回还款
+        return $result;
+    } else {
+        return 0.0;
     }
+}
+function getTeamPiece() {
+    global $CURUSER;
+    $record = NexusDB::table("custom_team_piece")
+        ->where('user_id', $CURUSER['id'])
+        ->first();
+    return $record;
+}
+function getTeamMember() {
+    global $CURUSER;
+    $record = NexusDB::table("custom_team_member")
+        ->where('user_id', $CURUSER['id'])
+        ->get();
+    return $record;
+}
+function bonusarray($option = 0){
+    global $onegbupload_bonus,$fivegbupload_bonus,$tengbupload_bonus,$oneinvite_bonus,$customtitle_bonus,$vipstatus_bonus, $basictax_bonus, $taxpercentage_bonus, $bonusnoadpoint_advertisement, $bonusnoadtime_advertisement;
+    global $lang_mybonus;
+    global $CURUSER;
+    global $teamDao;
+    global $turnipDaily;
+    $oldRecord = getTurnip();
+    $profit = getProfit();
+    $teamPiece = getTeamPiece();
+    $teamMember = getTeamMember();
+    $teamPic = $teamDao->getTeamPic();
 
+    $results = [];
+
+    //##################
+    //##################
+    //##################
+//    echo time();
+    //##################
+    //##################
+    //##################
+    // 英灵殿角色展示
+    $bonus = array();
+    $bonus['points'] = 1000;// 加个
+    $bonus['art'] = 'team'; // type
+    $bonus['menge'] = 0; // 1gb的字节数
+    $bonus['name'] = "象岛英灵殿 【诸神归位】"; // text
+    $imgStr = "";
+    foreach ($teamMember as $member) {
+        //隐藏表单 - 名称 hidden
+        $hiddenInputMemberName = "<input type='hidden' name='memberName' value='".$member->name."' disabled='true'/>";
+        $hiddenInputMemberId = "<input type='hidden' name='memberId' value='".$member->id."' disabled='true'/>";
+        // 图片
+        $memberImg = "<img class='memberPic' src='".$teamPic[$member->name]."'>";
+        // 按钮
+        $memberBtn="<input class=\"memberBtn\" type=\"submit\" name=\"submit\" value=\"". "投喂" ."\" disabled='true'/>";
+        // 数量
+        $memberNum="<input class='memberNum' type='number' value='1' max='".($member->lv + 10)."' min='1' name='foodNum' value=\"".$turnipDaily->name ."\" required disabled='true'/>";
+        // 文本
+        $memberText="<div class=\"memberText\">".$member->info;
+        $today_start = date('Y-m-d 00:00:00');
+        if ($member->last_feed_at == $today_start) {
+            $memberText=$memberText."<br><br>【投喂】吃饱了~";
+        } else {
+            $memberText=$memberText."<br><br>【投喂".$turnipDaily->name."】 (花费按照蔬菜市场价计算,每天限一次)".
+            "<br>&nbsp;&nbsp;&nbsp;数量&nbsp;&nbsp;&nbsp;".$memberNum." 个 x ".$turnipDaily->price."象草 ".$memberBtn;
+        }
+//        $memberText=$memberText."<br><br>【投喂".$turnipDaily->name."】 (花费按照蔬菜市场价计算,每天限一次)".
+//            "<br>&nbsp;&nbsp;&nbsp;数量&nbsp;&nbsp;&nbsp;".$memberNum." 个 x ".$turnipDaily->price."象草 ".$memberBtn;
+        $memberText=$memberText.
+            "<br><br>【等级】".$member->lv.
+            "<br>【经验】".$member->exp.
+            "<br>【生命】".$member->hp.
+            "<br>【攻击】".$member->atk.
+            "<br>【防御】".$member->def.
+            $hiddenInputMemberName.
+            $hiddenInputMemberId.
+            "</div>";
+        // 拼接div块
+        $imgStr = $imgStr.
+            "<div class='member' onmouseover='enableInputs(this)' onmouseout='disableInputs(this)'  >".
+                $memberImg.
+                $memberText.
+            "</div>";
+    }
+    $imgStr = "<div class='allMember'>".$imgStr."</div>";
+    $bonus['description'] = "角色碎片数量: ".$teamPiece->info."<br><br>".$imgStr;// text
+    $results[] = $bonus;
+
+    $upString = "<b class='rainbow'>".$teamDao->getUpMemberName()."抽取概率UP!</b>";
+    // 扭蛋机1
+    $bonus = array();
+    $bonus['points'] = 6480.0;// 加个
+    $bonus['art'] = 'gacha'; // type
+    $bonus['times'] = 1; // 抽多少次
+    $bonus['menge'] = 0; // 1gb的字节数
+    $bonus['name'] = "小象智能扭蛋机 Plus【单抽出奇迹 ".$upString."】 "; // text
+    $bonus['description'] = "";// text
+    $results[] = $bonus;
+    // 扭蛋机10
+    $bonus = array();
+    $bonus['points'] = 64800.0;// 加个
+    $bonus['art'] = 'gacha'; // type
+    $bonus['times'] = 10; // 抽多少次
+    $bonus['menge'] = 0; // 1gb的字节数
+    $bonus['name'] = "小象智能扭蛋机 Pro Max Ultra 至尊豪华Master版【十连保平安 ".$upString."】 "; // text
+    $bonus['description'] = "当您想要收集更多可爱的伙伴时，欢迎来到小象智能扭蛋机！
+<br>我们提供抽卡服务，让您轻松地获得角色碎片，集齐10枚碎片可以获得对应角色。
+<br>在这里，您可以发现新角色、展示您的收藏，并享受无尽的乐趣。快来体验吧！";
+    $results[] = $bonus;
+
+    // 查一下当前持仓
+    $currentNumber = 0;
+    $currentPrice = 0;
+    if ($oldRecord !== null) {
+        $currentNumber = $oldRecord->number;
+        $currentPrice = $oldRecord->price;
+    }
     // 进货 象岛农庄
     $bonus = array();
     $bonus['art'] = 'buyTurnip'; // type
     $bonus['menge'] = 0; // 1gb的字节数
-    if (getWeekDayNumber() == 7) {
+    if (getWeekDayNumber() == "7") {
         $bonus['points'] = $turnipDaily->price;
-        $bonus['name'] = "象岛农庄 【" . $turnipDaily->name . " - 作物成熟 - 开售中】";
+        $bonus['name'] = "象岛农庄 【" . $turnipDaily->name . " - 作物成熟 - <b class='rainbow'>开售中</b>】";
         $bonus['description'] = $turnipDaily->name."的价格是".$turnipDaily->price."，保质期至下周六晚上，要马上进货吗？";
     } else {
         $bonus['points'] = 0;
@@ -98,21 +224,24 @@ function bonusarray($option = 0){
     $bonus['points'] = $turnipDaily->price;
     $bonus['art'] = 'saleTurnip'; // type
     $bonus['menge'] = 0;
-    if (getWeekDayNumber() == 7) {
-        $bonus['name'] = "小象新鲜蔬菜店 【休息日】 ".$turnipDaily->name."库存：".$countCurrentTurnip." 成本：".$oldRecord->price;
+    if (getWeekDayNumber() == "7") {
+        $bonus['name'] = "小象新鲜蔬菜店 【休息日】 ".$turnipDaily->name."库存：".$currentNumber." 成本：".$currentPrice;
         $bonus['description'] = "岛民都在家看硬盘里的影视资源，没人来买东西了";
+        $bonus['maxNum'] = 0;
     } else {
-        $bonus['name'] = "小象新鲜蔬菜店 【".$turnipDaily->name."<b class='rainbow'> 市场单价：".$turnipDaily->price."</b> "."库存：".$countCurrentTurnip." 成本：".$oldRecord->price."】";
-        $bonus['description'] = $turnipDaily->name."~ ".$turnipDaily->name."~ "."能涨价就太好了~~  开店累计盈利 ".$profit." 盈利目标 ".getMaxProfit()."(净利润)";
-    }
-    $userCanProfit = bcsub(getMaxProfit(), $profit);
-    $userProfitOneProduct = bcsub($turnipDaily->price, $oldRecord->price);
-    $profitNum = bcdiv($userCanProfit, $userProfitOneProduct, 0) + 1;
-    // 大于进货价时, 只需要考虑
-    if ($turnipDaily->price > $oldRecord->price) {
-        $bonus['maxNum'] = min($countCurrentTurnip, $profitNum);
-    } else {
-        $bonus['maxNum'] = $countCurrentTurnip;
+        $bonus['name'] = "小象新鲜蔬菜店 【".$turnipDaily->name."<b class='rainbow'> 市场单价：".$turnipDaily->price."</b> "."库存：".$currentNumber." 成本：".$currentPrice."】";
+        $bonus['description'] = "价格每12小时波动一次 ".$turnipDaily->name."~ ".$turnipDaily->name."~ "."能涨价就太好了~~  开店累计盈利 ".$profit." 盈利目标 ".getMaxProfit()."(净利润)";
+        // 售价比进货价高, 考虑两个上限
+        if ($turnipDaily->price > $currentPrice) {
+            $userCanProfit = bcsub(getMaxProfit(), $profit);
+            $userProfitOneProduct = bcsub($turnipDaily->price, $currentPrice);
+            $profitNum = bcdiv($userCanProfit, $userProfitOneProduct, 0) + 1;
+            $bonus['maxNum'] = min($currentNumber, $profitNum);
+        }
+        // 售价比进货价低肯定是亏损, 不考虑盈利上限问题
+        else {
+            $bonus['maxNum'] = $currentNumber;
+        }
     }
     $results[] = $bonus;
 
@@ -122,7 +251,7 @@ function bonusarray($option = 0){
     $bonus['art'] = 'loan'; // type
     $bonus['menge'] = 0; // 1gb的字节数
     $bonus['name'] = "贷款"; // text
-    $bonus['description'] = "福利象草贷, 最高10万象草秒到账, 手续费0元, 日息低至2%, 你只能同时申请一笔贷款";// text
+    $bonus['description'] = "福利象草贷, 手续费0元, 日息低至2%, 你只能同时申请一笔贷款";// text
     $results[] = $bonus;
 
     //还款
@@ -233,14 +362,17 @@ function bonusarray($option = 0){
 
     //Bonus Gift
     $bonus = array();
-    $bonus['points'] = 100;
+    $bonus['points'] = 10000;
     $bonus['art'] = 'gift_1';
     $bonus['menge'] = 0;
     $bonus['name'] = $lang_mybonus['text_bonus_gift'];
     $bonus['description'] = $lang_mybonus['text_bonus_gift_note'];
     if ($basictax_bonus || $taxpercentage_bonus){
-        $onehundredaftertax = 100 - $taxpercentage_bonus - $basictax_bonus;
-        $bonus['description'] .= "<br /><br />".$lang_mybonus['text_system_charges_receiver']."<b>".($basictax_bonus ? $basictax_bonus.$lang_mybonus['text_tax_bonus_point'].add_s($basictax_bonus).($taxpercentage_bonus ? $lang_mybonus['text_tax_plus'] : "") : "").($taxpercentage_bonus ? $taxpercentage_bonus.$lang_mybonus['text_percent_of_transfered_amount'] : "")."</b>".$lang_mybonus['text_as_tax'].$onehundredaftertax.$lang_mybonus['text_tax_example_note'];
+        $onehundredaftertax = 10000 - $taxpercentage_bonus * 100 - $basictax_bonus;
+        // 收取基础手续费$basictax_bonus "1000"
+        // 加上百分比手续费$taxpercentage_bonus "30"
+//        $bonus['description'] .= "<br /><br />".$lang_mybonus['text_system_charges_receiver']."<b>".($basictax_bonus ? $basictax_bonus.$lang_mybonus['text_tax_bonus_point'].add_s($basictax_bonus).($taxpercentage_bonus ? $lang_mybonus['text_tax_plus'] : "") : "").($taxpercentage_bonus ? $taxpercentage_bonus.$lang_mybonus['text_percent_of_transfered_amount'] : "")."</b>".$lang_mybonus['text_as_tax'].$onehundredaftertax.$lang_mybonus['text_tax_example_note'];
+        $bonus['description'] .= "<br /><br />".$lang_mybonus['text_system_charges_receiver']."<b>".($basictax_bonus ? $basictax_bonus.$lang_mybonus['text_tax_bonus_point'].add_s($basictax_bonus).($taxpercentage_bonus ? $lang_mybonus['text_tax_plus'] : "") : "").($taxpercentage_bonus ? $taxpercentage_bonus.$lang_mybonus['text_percent_of_transfered_amount'] : "")."</b>"."作为税收。例如，当你选择赠送10000个魔力值，接收者实际只收到".$onehundredaftertax.$lang_mybonus['text_tax_example_note'];
     }
     $results[] = $bonus;
 
@@ -483,6 +615,9 @@ if (isset($do)) {
         $msg = "出售成功";
     elseif ($do == 'sale_turnip_failed')
         $msg = "出售失败";
+    elseif (strpos($do, "结果") !== false) {
+        $msg = $do;
+    }
     else
         $msg = '';
 }
@@ -493,27 +628,6 @@ if (isset($do)) {
 stdhead($CURUSER['username'] . $lang_mybonus['head_karma_page']);
 // 魔力值保留一位小数，并添加千位分隔符
 $bonus = number_format($CURUSER['seedbonus'], 1);
-
-function totalToRepay($userid) {
-    $loanInfo = NexusDB::table('custom_loan_repayment')->where('user_id', $userid)->first();
-    if ($loanInfo !== null) {
-        // 计算贷款总利息
-        $seedbonus = $loanInfo->seedbonus; // 贷款的钱数
-        $createdAt = strtotime($loanInfo->created_at); // 贷款开始时间的时间戳
-        $today = time(); // 今天的时间戳
-        $daysPassed = floor(($today - $createdAt) / (60 * 60 * 24)); // 已经过去的天数
-        $totalInterest = $seedbonus * pow(1.02, $daysPassed) - $seedbonus; // 总利息
-        // 计算用户今天需要还款的总额
-        $result = $seedbonus + $totalInterest; // 总共需要还的钱数
-        if ($result > $seedbonus * 2) {
-            return $seedbonus * 2;
-        }
-        // 返回还款
-        return $result;
-    } else {
-        return 0.0;
-    }
-}
 
 // 如果没有动作
 if (!$action) {
@@ -537,6 +651,16 @@ if (!$action) {
         "<td class=\"colhead\" align=\"center\">".$lang_mybonus['col_points']."</td>". // 价格
         "<td class=\"colhead\" align=\"center\">".$lang_mybonus['col_trade']."</td>".
         "</tr>");
+
+    // 自定的一行
+//    print("<tr>");
+//    print("<form action=\"?action=exchange\" method=\"post\">");
+//        print("<td class=\"rowhead_center\"><input type=\"hidden\" name=\"option\" value=\"0\" /><b>666</b></td>");
+//        print("<td class=\"rowhead_center\"><input type=\"hidden\" name=\"option\" value=\"0\" /><b>内容</b></td>");
+//        print("<td class=\"rowhead_center\"><input type=\"hidden\" name=\"option\" value=\"0\" /><b>64800</b></td>");
+//    print("<td class=\"rowfollow\" align=\"center\"><input type=\"submit\" name=\"submit\" value=\"". "召唤小象" ."\" /></td>");
+//    print("</form>");
+//    print("</tr>");
 
     // 遍历显示每一项奖励
     for ($i=0; $i < count($allBonus); $i++)
@@ -563,49 +687,62 @@ if (!$action) {
             $otheroption_title = "<input type=\"text\" name=\"title\" style=\"width: 200px\" maxlength=\"30\" />";
             print("<td class=\"rowfollow\" align='left'><h1>".$bonusarray['name']."</h1>".$bonusarray['description']."<br /><br />".$lang_mybonus['text_enter_titile'].$otheroption_title.$lang_mybonus['text_click_exchange']."</td><td class=\"rowfollow\" align='center'>".number_format($bonusarray['points'])."</td>");
         }
-        elseif ($bonusarray['art'] == 'gift_1'){  //for Give A Karma Gift
-            $otheroption = "<table width=\"100%\"><tr><td class=\"embedded\"><b>".$lang_mybonus['text_username']."</b><input type=\"text\" name=\"username\" style=\"width: 200px\" maxlength=\"24\" /></td><td class=\"embedded\"><b>".$lang_mybonus['text_to_be_given']."</b><input type=\"number\" name=\"bonusgift\" id=\"giftcustom\" style='width: 80px' min='100' />".$lang_mybonus['text_karma_points']."</td></tr><tr><td class=\"embedded\" colspan=\"2\"><b>".$lang_mybonus['text_message']."</b><input type=\"text\" name=\"message\" style=\"width: 400px\" maxlength=\"100\" /></td></tr></table>";
-            print("<td class=\"rowfollow\" align='left'><h1>".$bonusarray['name']."</h1>".$bonusarray['description']."<br /><br />".$lang_mybonus['text_enter_receiver_name']."<br />$otheroption</td><td class=\"rowfollow nowrap\" align='center'>".$lang_mybonus['text_min']."100</td>");
+        elseif ($bonusarray['art'] == 'gift_1'){  //for Give A Karma Gift 赠送的魔力值(芙蓉王)1万上限
+            $otheroption = "<table width=\"100%\"><tr><td class=\"embedded\"><b>".$lang_mybonus['text_username']."</b><input type=\"text\" name=\"username\" style=\"width: 200px\" maxlength=\"24\" /></td><td class=\"embedded\"><b>".$lang_mybonus['text_to_be_given']."</b><input type=\"number\" name=\"bonusgift\" id=\"giftcustom\" style='width: 80px' min='10000' />".$lang_mybonus['text_karma_points']."</td></tr><tr><td class=\"embedded\" colspan=\"2\"><b>".$lang_mybonus['text_message']."</b><input type=\"text\" name=\"message\" style=\"width: 400px\" maxlength=\"100\" /></td></tr></table>";
+            print("<td class=\"rowfollow\" align='left'><h1>".$bonusarray['name']."</h1>".$bonusarray['description']."<br /><br />".$lang_mybonus['text_enter_receiver_name']."<br />$otheroption</td><td class=\"rowfollow nowrap\" align='center'>".$lang_mybonus['text_min']."10000</td>");
         }
-        elseif ($bonusarray['art'] == 'gift_2'){  //charity giving
+        elseif ($bonusarray['art'] == 'gift_2'){  //charity giving 赠送的慈善魔力粉
             $otheroption = "<table width=\"100%\"><tr><td class=\"embedded\">".$lang_mybonus['text_ratio_below']."<select name=\"ratiocharity\"> <option value=\"0.1\"> 0.1</option><option value=\"0.2\"> 0.2</option><option value=\"0.3\" selected=\"selected\"> 0.3</option> <option value=\"0.4\"> 0.4</option> <option value=\"0.5\"> 0.5</option> <option value=\"0.6\"> 0.6</option><option value=\"0.7\"> 0.7</option><option value=\"0.8\"> 0.8</option></select>".$lang_mybonus['text_and_downloaded_above']." 10 GB</td><td class=\"embedded\"><b>".$lang_mybonus['text_to_be_given']."</b><select name=\"bonuscharity\" id=\"charityselect\" > <option value=\"1000\"> 1,000</option><option value=\"2000\"> 2,000</option><option value=\"3000\" selected=\"selected\"> 3000</option> <option value=\"5000\"> 5,000</option> <option value=\"8000\"> 8,000</option> <option value=\"10000\"> 10,000</option><option value=\"20000\"> 20,000</option><option value=\"50000\"> 50,000</option></select>".$lang_mybonus['text_karma_points']."</td></tr></table>";
             print("<td class=\"rowfollow\" align='left'><h1>".$bonusarray['name']."</h1>".$bonusarray['description']."<br /><br />".$lang_mybonus['text_select_receiver_ratio']."<br />$otheroption</td><td class=\"rowfollow nowrap\" align='center'>".$lang_mybonus['text_min']."1,000<br />".$lang_mybonus['text_max']."50,000</td>");
         }
         elseif ($bonusarray['art'] == 'loan') {
-            $otheroption_title = "<input min=\"10000\" max=\"100000\" type=\"number\" name=\"loanBonus\" style=\"width: 200px\" required='true' />";
-            print("<td class=\"rowfollow\" align='left'><h1>".$bonusarray['name']."</h1>".$bonusarray['description']."<br /><br />"."输入你想要的<b>贷款额度</b> ".$otheroption_title." 点击贷款 !"."</td><td class=\"rowfollow\" align='center'>".number_format($bonusarray['points'])."</td>");
+            $otheroption_title = "<input min=\"10000\" max=\"".getMaxLoan()."\" type=\"number\" name=\"loanBonus\" style=\"width: 200px\" required='true' />";
+            print("<td id=\"loan\" class=\"rowfollow\" align='left'><h1>".$bonusarray['name']."</h1>".$bonusarray['description']."<br /><br />"."输入你想要的<b>贷款额度</b> ".$otheroption_title." 点击贷款 !"."</td><td class=\"rowfollow\" align='center'>".number_format($bonusarray['points'])."</td>");
         }
         elseif ($bonusarray['art'] == 'repayment') {
             $bonusarray['points'] = totalToRepay($CURUSER['id']);
-            print("<td class=\"rowfollow\" align='left'><h1>".$bonusarray['name']."</h1>".$bonusarray['description']."</td><td class=\"rowfollow\" align='center'>".number_format($bonusarray['points'])."</td>");
+            print("<td id=\"repayment\" class=\"rowfollow\" align='left'><h1>".$bonusarray['name']."</h1>".$bonusarray['description']."</td><td class=\"rowfollow\" align='center'>".number_format($bonusarray['points'])."</td>");
         }
         elseif ($bonusarray['art'] == 'buyTurnip') {
-            if (getWeekDayNumber() == 7) {
+            if (getWeekDayNumber() == "7") {
                 $disable = "";
                 if ($bonusarray['maxNum'] == 0) {
                     $disable = "disabled";
                 }
                 $tempInput = "<input min='1' max=\"".$bonusarray['maxNum']."\" type=\"number\" name=\"buyTurnipNum\" style=\"width: 200px\" required='true' ".$disable."/>";
-                print("<td class=\"rowfollow\" align='left'><h1>".$bonusarray['name']."</h1>".$bonusarray['description']
+                print("<td id=\"buyTurnipSunday\" class=\"rowfollow\" align='left'><h1>".$bonusarray['name']."</h1>".$bonusarray['description']
                     ."<br /><br />"."输入<b>进货数量</b> ".$tempInput." 点击进货 !"
                     ."</td><td class=\"rowfollow\" align='center'>".number_format($bonusarray['points'])."</td>");
             } else {
-                print("<td class=\"rowfollow\" align='left'><h1>".$bonusarray['name']."</h1>".$bonusarray['description']."</td><td class=\"rowfollow\" align='center'> </td>");
+                print("<td id=\"buyTurnip\" class=\"rowfollow\" align='left'><h1>".$bonusarray['name']."</h1>".$bonusarray['description']."</td><td class=\"rowfollow\" align='center'> </td>");
             }
         }
         elseif ($bonusarray['art'] == 'saleTurnip') {
-            if (getWeekDayNumber() !== 7) {
+            if (getWeekDayNumber() !== "7") {
                 $disable = "";
                 if ($bonusarray['maxNum'] == 0) {
                     $disable = "disabled";
                 }
                 $tempInput = "<input min='1' max=\"".$bonusarray['maxNum']."\" type=\"number\" name=\"saleTurnipNum\" style=\"width: 200px\" required='true' ".$disable."/>";
-                print("<td class=\"rowfollow\" align='left'><h1>".$bonusarray['name']."</h1>".$bonusarray['description']
+                print("<td id=\"saleTurnip\" class=\"rowfollow\" align='left'><h1>".$bonusarray['name']."</h1>".$bonusarray['description']
                     ."<br /><br />"."输入<b>出售数量</b> ".$tempInput." 点击出售 ! (超过盈利目标后多余的库存会自动原价卖出)"
                     ."</td><td class=\"rowfollow\" align='center'>".number_format($bonusarray['points'])."</td>");
             } else {
-                print("<td class=\"rowfollow\" align='left'><h1>".$bonusarray['name']."</h1>".$bonusarray['description']."</td><td class=\"rowfollow\" align='center'> </td>");
+                print("<td id=\"saleTurnip\" class=\"rowfollow\" align='left'><h1>".$bonusarray['name']."</h1>".$bonusarray['description']."</td><td class=\"rowfollow\" align='center'> </td>");
             }
+        }
+        elseif ($bonusarray['art'] == 'gacha') {
+            // 10抽
+            if ($bonusarray['times'] == 10) {
+                print("<td id=\"gacha10\"  class=\"rowfollow\" align='left'><h1>".$bonusarray['name']."</h1>".$bonusarray['description']."</td><td class=\"rowfollow\" align='center'>".number_format($bonusarray['points'])."</td>");
+            }
+            // 单抽
+            elseif ($bonusarray['times'] == 1) {
+                print("<td id=\"gacha1\"  class=\"rowfollow\" align='left'><h1>".$bonusarray['name']."</h1>".$bonusarray['description']."</td><td class=\"rowfollow\" align='center'>".number_format($bonusarray['points'])."</td>");
+            }
+        }
+        elseif ($bonusarray['art'] == 'team') {
+            print("<td  colspan=\"3\" class=\"rowfollow\" align='left'><h1>".$bonusarray['name']."</h1>".$bonusarray['description']."</td>");//<td class=\"rowfollow\" align='center'>"."</td>"
         }
         else {  //for VIP or Upload
             // 其他项的输出简介的主副标题, 价格
@@ -615,7 +752,7 @@ if (!$action) {
         // 交换的按钮
         // [卖出类型按钮]
         if ($bonusarray['art'] == 'saleTurnip') {
-            if (getWeekDayNumber() !== 7) {
+            if (getWeekDayNumber() !== "7") {
                 $disable = "";
                 if ($bonusarray['maxNum'] == 0) {
                     $disable = "disabled";
@@ -624,6 +761,9 @@ if (!$action) {
             } else {
                 print("<td class=\"rowfollow\" align=\"center\"> </td>");
             }
+        }
+        elseif ($bonusarray['art'] == 'team') {
+            // 按钮行被标题那列占用掉了
         }
         // [消费类型按钮]
         else if($CURUSER['seedbonus'] >= $bonusarray['points'])
@@ -721,7 +861,7 @@ if (!$action) {
                 if ($bonusarray['finishTarget'] == 1) {
                     print("<td class=\"rowfollow\" align=\"center\">盈利目标已达成</td>");
                 }
-                elseif (getWeekDayNumber() == 7) {
+                elseif (getWeekDayNumber() == "7") {
                     print("<td class=\"rowfollow\" align=\"center\"><input type=\"submit\" name=\"submit\" value=\"". "进货" ."\" /></td>");
                 } else {
                     print("<td class=\"rowfollow\" align=\"center\"> </td>");
@@ -840,7 +980,7 @@ if (!$action) {
 
 // 如果动作为交换奖励
 if ($action == "exchange") {
-
+    global $turnipDaily;
     // 作弊处理
     if (isset($_POST["userid"]) || isset($_POST["points"]) || isset($_POST["bonus"]) || isset($_POST["art"]) || !isset($_POST['option']) || !isset($allBonus[$_POST['option']])){
         write_log("User " . $CURUSER["username"] . "," . $CURUSER["ip"] . " is trying to cheat at bonus system",'mod');
@@ -859,11 +999,20 @@ if ($action == "exchange") {
     $seedbonus=$CURUSER['seedbonus']-$points;
 
     $bonusRep = new \App\Repositories\BonusRepository();
-    // [出售型]
+    global $teamDao;
+    // [出售型] [其他]
     if ($art == 'saleTurnip') {
         $saleTurnipNum = $_POST["saleTurnipNum"];
         $bonusRep->customSaleTurnip($CURUSER['id'], $points, $saleTurnipNum, \App\Models\BonusLogs::BUSINESS_TYPE_EXCHANGE_UPLOAD,   $points. " Points for sale turnip.",   []);
         nexus_redirect("" . get_protocol_prefix() . "$BASEURL/mybonus.php?do=sale_turnip_success");
+    }
+    elseif ($art == 'team') {
+        $foodNum = $_POST["foodNum"];
+        $memberName = $_POST['memberName'];
+        $memberId = $_POST['memberId'];
+        $eatResult = $teamDao->eatFoodAddExp($CURUSER['id'], $memberId, $memberName, $foodNum, $turnipDaily->price);
+//        echo "日志". $CURUSER['id']." ". $memberId." ". $memberName." ". $foodNum." ". $turnipDaily->price;
+        nexus_redirect("" . get_protocol_prefix() . "$BASEURL/mybonus.php?do=".$eatResult);
     }
     // [消费型]
     elseif($CURUSER['seedbonus'] >= $points) {
@@ -1100,10 +1249,43 @@ if ($action == "exchange") {
                 nexus_redirect("" . get_protocol_prefix() . "$BASEURL/mybonus.php?do=buy_turnip_success");
             }
         }
+        elseif ($art == 'gacha') {
+            $gachaResult = $teamDao->gachaTimes($CURUSER['id'], $bonusarray['times']);
+            nexus_redirect("" . get_protocol_prefix() . "$BASEURL/mybonus.php?do=".$gachaResult);
+        }
     } else {
         print("不知道为什么钱不够");
     }
 }
+
+
+// JavaScript
+// JavaScript
+// JavaScript
+// member投喂表单选中可用性
+echo "<script>";
+// 先禁止所有input, 然后打开对应角色的input
+echo "function enableInputs(element) {";
+//echo "  alert(\"这是外部alert\");";
+echo "  var all = document.querySelectorAll('.member input');";
+echo "  for (var i = 0; i < all.length; i++) {";
+echo "    all[i].disabled = true;";
+echo "  }";
+echo "  var inputs = element.querySelectorAll('input');";
+echo "  for (var i = 0; i < inputs.length; i++) {";
+echo "    inputs[i].disabled = false;";
+echo "  }";
+echo "}";
+// 鼠标移开禁止当前input
+echo "function disableInputs(element) {";
+echo "  var inputs = element.querySelectorAll('input');";
+echo "  for (var i = 0; i < inputs.length; i++) {";
+echo "    inputs[i].disabled = true;";
+echo "  }";
+echo "}";
+echo "</script>";
+
+
 
 // 页尾
 stdfoot();
