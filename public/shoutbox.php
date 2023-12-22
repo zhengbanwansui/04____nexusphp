@@ -131,9 +131,15 @@ else
 		if (isset($CURUSER) && $CURUSER['timetype'] != 'timealive')
 			$time = strftime("%m.%d %H:%M",$arr["date"]);
 		else $time = get_elapsed_time($arr["date"]).$lang_shoutbox['text_ago'];
-		print("<tr><td class=\"shoutrow\"><span class='date'>[".$time."]</span> ".
-$del ." ". $username." " . format_comment($arr["text"],true,false,true,true,600,false,false)."
-</td></tr>\n");
+		// 根据用户id决定是否开启html标签过滤
+        if ($arr["userid"] == 1) {
+            $custom_format_comment = format_comment($arr["text"],false,false,true,true,600,false,false);
+        } else {
+            $custom_format_comment = format_comment($arr["text"],true,false,true,true,600,false,false);
+        }
+
+        print("<tr><td class=\"shoutrow\"><span class='date'>[".$time."]</span> ".
+$del ." ". $username." " . $custom_format_comment. "</td></tr>\n");
 	}
 	print("</table>");
 }

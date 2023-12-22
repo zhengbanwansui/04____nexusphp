@@ -23,10 +23,48 @@
 #customMybonus tr:nth-child(even) {
 	background-color: var(--color-mainouter);
 }
+/*战斗场地%%%%%%%%%%%%%%%%%%%%%%%%%*/
+/*战斗场地%%%%%%%%%%%%%%%%%%%%%%%%%*/
+/*战斗场地%%%%%%%%%%%%%%%%%%%%%%%%%*/
+.battlefield {
+	width: 700px;
+	height: 500px;
+	background-color: darkgray;
+}
+/*战斗场地Fin%%%%%%%%%%%%%%%%%%%%%%%*/
+/*战斗场地Fin%%%%%%%%%%%%%%%%%%%%%%%*/
+/*战斗场地Fin%%%%%%%%%%%%%%%%%%%%%%%*/
 /*英灵殿角色图片#############################################################*/
 /*英灵殿角色图片#############################################################*/
 /*英灵殿角色图片#############################################################*/
+.selectSquare {
+	position: absolute;width:120px;z-index: 2000;
+}
+.memberSelectedPic {
+	position: absolute;  width:120px;z-index: 2000;
+}
+.piecePicBackground {/*碎片背景*/
+	display: inline-block;
+	padding: 3px;
+	margin: 8px;
+	border-radius: 100px;
+	border: 2px solid rgba(255, 215, 0, 0.5);
+	background-size: 80px 80px;
+	background-image: url("https://pic.ziyuan.wang/user/guest/2023/12/_edit_731749434807093_ec2249e02f734.jpg");
 
+}
+.piecePicBackground:hover {/*碎片背景*/
+	transform: scale(2.3);
+	transform-origin: center;
+}
+.piecePic {/*碎片*/
+	border-radius: 100px;
+	width:70px;
+	height: 70px;
+	object-fit: cover;
+	object-position: top; /* 图片从上部开始显示 */
+	flex: 1;
+}
 .allMember {
 	/*border: black solid;*/
 	display: flex;
@@ -36,7 +74,7 @@
 	flex-wrap: wrap;
 }
 .member {
-	margin-left: 10px;
+	margin-left: 20px;
 	position: relative;
 	display: flex;
 	flex-direction: column;
@@ -44,6 +82,7 @@
 }
 .memberPic {
 	height: 100px;
+	padding: 2px;
 }
 .memberBtn {
 	visibility: hidden;
@@ -61,8 +100,30 @@
 	left: -50px;
 }
 .memberPic:hover {
-	transform: scale(2);
+	transform: scale(1.6);
 	transform-origin: center bottom;
+	z-index: 1000;
+}
+.SSR:hover {
+	transform: scale(2.3);
+	padding: 0;
+	/*border-bottom: 2px solid #ffcaca;*/
+	/*border-top: 2px solid #ffcaca;*/
+	/*border-left: 2px solid #ffcaca;*/
+	/*border-right: 2px solid #ffcaca;*/
+	border-width: 2px;
+	border-style: solid;
+	border-top-left-radius: 40px;
+	border-top-right-radius: 40px;
+	background-size: 100px 100px;
+}
+.boy:hover {
+	background-image: url("https://pic.ziyuan.wang/user/zhengbanwansui/2023/12/QQ截图20231218234647_a99a604257fd2.png");
+	border-color: #ffc47d;
+}
+.girl:hover {
+	background-image: url("https://pic.ziyuan.wang/user/zhengbanwansui/2023/12/_661b00b1bf79c.png");
+	border-color: #ffcaca;
 }
 /*选中父元素时显示文字*/
 .member:hover .memberText {
@@ -123,7 +184,7 @@
 body
 {
 	padding-top: 40px;/*为了顶栏菜单不盖住banner*/
-	background: #e6e6e6 url('https://pic.ziyuan.wang/2023/11/17/zhengbanwansui_fbcc10d8ec64d.jpg') no-repeat center center fixed;
+	background: #e6e6e6 url('https://pic.ziyuan.wang/2023/11/17/zhengbanwansui_fbcc10d8ec64d.jpg1') no-repeat center center fixed;
 	background-size: 100% 100%;
 	background-position: center;
 	margin: 0;
@@ -138,7 +199,7 @@ body
 /*顶栏 主要是设置banner图*/
 table.head
 {
-	background-image: url('https://pic.ziyuan.wang/2023/11/17/zhengbanwansui_f7778bf26d4df.jpg');
+	background-image: url('https://pic.ziyuan.wang/2023/11/17/zhengbanwansui_f7778bf26d4df.jpg1');
 	background-repeat: no-repeat;
 	background-position: bottom;
 	background-size: cover;
@@ -983,4 +1044,4 @@ A.Peasant_Name:visited{color: #708090}
 .classic{color:#77b300}
 .recommended{color:#820084}
 .new{color:#ff0000}
-.striking{color:#ff0000}
+.striking{color:#ff0000; font-weight: bold; font-size: 15px}

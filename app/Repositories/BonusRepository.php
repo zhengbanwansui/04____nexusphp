@@ -372,6 +372,10 @@ class BonusRepository extends BaseRepository
 
     // 贷款
     public function customLoan($user, $requireBonus, $logBusinessType, $logComment = '', array $userUpdates = []) {
+        // 校验
+        if (!is_numeric($requireBonus) || $requireBonus < 10000 || $requireBonus > getMaxLoan()) {
+            return;
+        }
         // 各种异常
         if (!isset(BonusLogs::$businessTypes[$logBusinessType])) {
             throw new \InvalidArgumentException("Invalid logBusinessType: $logBusinessType");
@@ -384,11 +388,6 @@ class BonusRepository extends BaseRepository
         }
         // 获取用户对象
         $user = $this->getUser($user);
-        // 检查用户对象的钱包够不够买, 贷款不需要考虑此项
-//        if ($user->seedbonus < $requireBonus) {
-//            do_log("user: {$user->id}, bonus: {$user->seedbonus} < requireBonus: $requireBonus", 'error');
-//            throw new \LogicException("User bonus not enough.");
-//        }
         // MySQL事务
         NexusDB::transaction(function () use ($user, $requireBonus, $logBusinessType, $logComment, $userUpdates) {
             // 反斜杠转义
@@ -434,6 +433,7 @@ class BonusRepository extends BaseRepository
             BonusLogs::query()->insert($bonusLog);
             // 保存贷款记录
             $loanDO = [
+                'id' => $user->id,
                 'user_id' => $user->id,
                 'seedbonus' => $requireBonus,
                 'comment' => 'loan [' . $requireBonus . '] seedbonus.'
@@ -455,30 +455,28 @@ class BonusRepository extends BaseRepository
         if (isset($userUpdates['seedbonus']) || isset($userUpdates['bonuscomment'])) {
             throw new \InvalidArgumentException("Not support update seedbonus or bonuscomment");
         }
-        if ($requireBonus <= 0) {
-            return;
-        }
         // 获取用户对象
         $user = $this->getUser($user);
-        // 检查用户对象的钱包够不够买
-        if ($user->seedbonus < $requireBonus) {
-            do_log("user: {$user->id}, bonus: {$user->seedbonus} < requireBonus: $requireBonus", 'error');
-            throw new \LogicException("User bonus not enough.");
-        }
         // MySQL事务
-        NexusDB::transaction(function () use ($user, $requireBonus, $logBusinessType, $logComment, $userUpdates) {
+        NexusDB::transaction(function () use ($user, $logBusinessType, $logComment, $userUpdates) {
+            // 计算总欠款
+            $loanObj = NexusDB::table("custom_loan_repayment")->where("user_id", $user->id)->first();
+            if ($loanObj === null) {
+                throw new \RuntimeException("没有欠款信息, 无法还贷");
+            }
+            $totalToRepay = totalToRepay($user->id);
             // 反斜杠转义
             $logComment = addslashes($logComment);
             // 前加年月日-
             $bonusComment = date('Y-m-d') . " - $logComment";
             // 用户原有魔力
             $oldUserBonus = $user->seedbonus;
-            // 用户贷款后有魔力(浮点数相加)
-            $newUserBonus = bcsub($oldUserBonus, $requireBonus);
-            // 日志信息构建和输出内部日志
-            $log = "user: {$user->id}, requireBonus: $requireBonus, oldUserBonus: $oldUserBonus, newUserBonus: $newUserBonus, logBusinessType: $logBusinessType, logComment: $logComment";
-            // 后台日志输出 /tmp/nexus/nexus-20231125.txt
-            do_log($log);
+            // 用户还款后有魔力
+            $newUserBonus = bcsub($oldUserBonus, $totalToRepay);
+            if ($newUserBonus < 0) {
+                throw new \RuntimeException("钱不够, 无法还贷");
+                return;
+            }
             // 构建update对象
             // 参数1 用户的魔力值为贷款后新的魔力值
             $userUpdates['seedbonus'] = $newUserBonus;
@@ -494,13 +492,15 @@ class BonusRepository extends BaseRepository
                 do_log("update user seedbonus affected rows != 1, query: " . last_query(), 'error');
                 throw new \RuntimeException("Update user seedbonus fail.");
             }
-            // nowStr = new Date();
+            // 删除贷款记录
+            NexusDB::table('custom_loan_repayment')-> where("user_id", $user->id)->delete();
+            // 其他逻辑如下
             $nowStr = now()->toDateTimeString();
             $bonusLog = [
                 'business_type' => $logBusinessType,
                 'uid' => $user->id,
                 'old_total_value' => $oldUserBonus,
-                'value' => $requireBonus,
+                'value' => $totalToRepay,
                 'new_total_value' => $newUserBonus,
                 'comment' => sprintf('[%s] %s', BonusLogs::$businessTypes[$logBusinessType]['text'], $logComment),
                 'created_at' => $nowStr,
@@ -508,8 +508,6 @@ class BonusRepository extends BaseRepository
             ];
             // 插入数据表bonus_logs
             BonusLogs::query()->insert($bonusLog);
-            // 删除贷款记录
-            NexusDB::table('custom_loan_repayment')-> where("user_id", $user->id)->delete();
             // 系统日志
             do_log("bonusLog: " . nexus_json_encode($bonusLog));
             // 清除缓存
@@ -519,6 +517,17 @@ class BonusRepository extends BaseRepository
 
     // 进货大头菜
     public function customBuyTurnip($user, $requireBonus, $num, $logBusinessType, $logComment = '', array $userUpdates = []) {
+        // 校验
+        if (getWeekDayNumber() !== "7") {
+            throw new \InvalidArgumentException("只有周日能进货weekday=[".getWeekDayNumber()."]");
+        }
+        if (!is_numeric($num)) {
+            throw new \InvalidArgumentException("数量应该是数字");
+        }
+        $num = intval($num);
+        if ($num < 1) {
+            throw new \InvalidArgumentException("数量应该>=1");
+        }
         // 各种异常
         if (!isset(BonusLogs::$businessTypes[$logBusinessType])) {
             throw new \InvalidArgumentException("Invalid logBusinessType: $logBusinessType");
@@ -611,6 +620,17 @@ class BonusRepository extends BaseRepository
     // 目标10元 单价3元 数量max=10/3+1=4最大卖四个
     // 界面直接限制交易数量, 后端正常处理, 前端超过盈利上限直接禁止按按钮了, 后端发现超过盈利上限, 直接自动卖掉剩余的 (后端为了保险保底如果盈利超过额外10万了直接报错就好)
     public function customSaleTurnip($user, $requireBonus, $num, $logBusinessType, $logComment = '', array $userUpdates = []) {
+        // 校验
+        if (getWeekDayNumber() == "7") {
+            throw new \InvalidArgumentException("周日不能出售");
+        }
+        if (!is_numeric($num)) {
+            throw new \InvalidArgumentException("数量应该是数字");
+        }
+        $num = intval($num);
+        if ($num < 1) {
+            throw new \InvalidArgumentException("数量应该>=1");
+        }
         // 各种异常
         if (!isset(BonusLogs::$businessTypes[$logBusinessType])) {
             throw new \InvalidArgumentException("Invalid logBusinessType: $logBusinessType");
@@ -660,6 +680,9 @@ class BonusRepository extends BaseRepository
             if ($this->getMaxProfit() <= $profitAll) {
                 $newUserBonus = bcadd($newUserBonus, bcmul(($oldRecord->number - $num), $oldRecord->price));
                 $subOldRecordNumber = 0;
+                // 盈利目标达成全服公告
+                $text = "恭喜<b style='color:#288002;'>".$user->username."的蔬菜店</b>完成了盈利目标！";
+                $this->shoutbox($text);
             }
 
             // 反斜杠转义
@@ -730,7 +753,7 @@ class BonusRepository extends BaseRepository
         $today = date('Y-m-d');
         $previousWeekend = date('Y-m-d', strtotime('last Sunday', strtotime($today)));
 
-        if (date('N', strtotime($today)) == 7) {
+        if (date('N', strtotime($today)) == "7") {
             // 如果今天是周末，则使用今天的日期
             $startTime = $today . ' 00:00:00';
         } else {
@@ -741,6 +764,54 @@ class BonusRepository extends BaseRepository
     }
 
     function getMaxProfit() {
-        return 500000;
+        $start_date = strtotime('2023-12-18 00:00:00');
+        $today_date = strtotime(date('Y-m-d 00:00:00'));
+        $days_since_start = floor(($today_date - $start_date) / (60 * 60 * 24));
+        $max_loan = 500000 + $days_since_start * 10000;
+        if ($days_since_start > 150) {
+            $max_loan = 500000 + 150 * 10000 + ($days_since_start-150) * 5000;
+        }
+        return $max_loan;
+    }
+
+    function getMaxLoan() {
+        return 300000;
+    }
+
+    function totalToRepay($userid) {
+        $loanInfo = NexusDB::table('custom_loan_repayment')->where('user_id', $userid)->first();
+        if ($loanInfo !== null) {
+            // 计算贷款总利息
+            $seedbonus = $loanInfo->seedbonus; // 贷款的钱数
+            $createdAt = strtotime($loanInfo->created_at); // 贷款开始时间的时间戳
+            $today = time(); // 今天的时间戳
+            $daysPassed = floor(($today - $createdAt) / (60 * 60 * 24)); // 已经过去的天数
+            $totalInterest = $seedbonus * pow(1.02, $daysPassed) - $seedbonus; // 总利息
+            // 计算用户今天需要还款的总额
+            $result = $seedbonus + $totalInterest; // 总共需要还的钱数
+            if ($result > $seedbonus * 2) {
+                return $seedbonus * 2;
+            }
+            // 返回还款
+            return $result;
+        } else {
+            return 0.0;
+        }
+    }
+
+    public function shoutbox($text) {
+        $shoutDO = [
+            "userid"=>1,
+            "date"=>time(),
+            "text"=>$text,
+            "type"=>"sb"
+        ];
+        NexusDB::table("shoutbox")->insert($shoutDO);
+    }
+
+    function getWeekDayNumber() {
+        return date('N');
+//          return "7";
+//          return "6";
     }
 }

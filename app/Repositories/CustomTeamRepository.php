@@ -52,9 +52,7 @@ class CustomTeamRepository extends BaseRepository
             // 扭蛋$times个角色名 当期up角色概率提升
             $randKeys = $this->getRandomKeys($teamArray, $times);
             global $globalGachaResult;
-            $globalGachaResult =
-                "抽卡结果: 次数=".$times.
-                " 获得物品=".implode(',', array_map(function($randKeys) {return $randKeys . '碎片x1';}, $randKeys));
+            $globalGachaResult = "抽卡结果: 次数=".$times. " "."获得物品=".implode(',', array_map(function($randKeys) {return $randKeys . '碎片x1';}, $randKeys));
             // 增加到碎片
             foreach ($randKeys as $key) {
                 if (array_key_exists($key, $pieceArray)) {
@@ -89,9 +87,16 @@ class CustomTeamRepository extends BaseRepository
                         ];
                         $newMember = $this->generateHpAtkDef($newMember);
                         NexusDB::table("custom_team_member")->insert($newMember);
-                        // todo shoutbox
-                        $this->shoutbox($user->id, "恭喜".$user->username."获得角色".
-                            str_replace("<br>", ",", $newMember['info']).
+                        // shoutbox
+                        $infoShout = str_replace("<br>", ",", $newMember['info']);
+                        $parts = explode(',', $infoShout, 2);
+                        if (strpos($newMember['info'], "限定")) {
+                            $b1 = "<b class='rainbow'>";
+                        } else {
+                            $b1 = "<b style='color: #ff4242c9'>";
+                        }
+                        $this->shoutbox("恭喜".$user->username."获得角色".
+                            $b1.$parts[0]."</b> ".$parts[1].
                             " HP=".$newMember['hp']." ATK=".$newMember['atk']." DEF=".$newMember['def']);
                     }
                 }
@@ -159,8 +164,167 @@ class CustomTeamRepository extends BaseRepository
     // 随机对战
     // 随机对战
     // 随机对战
-    public function vs($user) {
+    public function vs($user, $teamMember, $memberIndexStr) {
+        // 获取用户信息
+        $user = $this->getUser($user);
+        $we = [];
+        foreach (explode(",", $memberIndexStr) as $index) {
+            $m = $teamMember[intval($index)];
+            $we[] = $m;
+        }
+        NexusDB::transaction(function () use ($user, &$result, $we, $memberIndexStr) {
+            $result = "战斗结果: @@@战斗模式: ".$this->getVsTypeList()[$this->getTodayVsType()];
+            switch ($this->getTodayVsType()) {
+                case 0:// 1v1
+                    if(count($we) != 1) {
+                        throw new NexusException("选中上场的角色数量应该为1");
+                    }
+                    // 获取敌人
+                    $enemy = $this->getEnemyArray($user, 1);
+                    // 战斗
+                    $this->vsTemplate($user, $we, $enemy, $result);
+                    break;
+                case 1:// 5v5
+                    if(count($we) != 5) {
+                        throw new NexusException("选中上场的角色数量应该为5个 你上场了=".count($we)." str=".$memberIndexStr);
+                    }
+                    // 获取敌人
+                    $enemy = $this->getEnemyArray($user, 5);
+                    // 战斗
+                    $this->vsTemplate($user, $we, $enemy, $result);
+                    break;
+                case 2:// NvBoss
+                    // 获取敌人
+                    $enemy = $this->getEnemyArray($user, 1);
+                    // 战斗
+                    $record = $this->vsTemplate($user, $we, $enemy, $result);
+                    $totalDamage = $record['totalDamage'];
 
+                    break;
+            }
+        });
+        return $result;
+    }
+
+    // 战斗模板方法, 使用此方法可以处理任何形式的战斗, 方便统一处理
+    // 战斗模板方法, 使用此方法可以处理任何形式的战斗, 方便统一处理
+    // 战斗模板方法, 使用此方法可以处理任何形式的战斗, 方便统一处理
+    // result是战斗记录, 每一行开头用@@@换行
+    function vsTemplate($user, $we, $enemy, &$result) {
+        // 战报记录对象
+        $record = [
+            "totalDamage"=>0,
+            "win"=>2,// 0输1赢2平
+        ];
+
+        $result .= "@@@我方上场角色: ";
+        foreach ($we as $one) {
+            $result .= '['.$one->name . '] ';
+        }
+        $result .= "@@@VS";
+        $result .= "@@@敌方上场角色: ";
+        foreach ($enemy as $one) {
+            $result .= $one->username."的"."[".$one->name."]";
+        }
+        $result .= "@@@开始战斗";
+        // we和enemy的角色不管有多少个都按照一套战斗逻辑去写
+
+        // 根据等级排序生成一次行动轨迹之后一直用就行
+        $all = array_merge($we, $enemy);
+        usort($all, function ($a, $b) {
+            return $b->lv - $a->lv;
+        });
+        // we和enemy转为{name=>对象}的关联数组
+        $associatedWe = [];
+        $associatedEnemy = [];
+        foreach ($we as $character) {
+            $associatedWe[$character->name] = $character;
+        }
+        foreach ($enemy as $character) {
+            $associatedEnemy[$character->name] = $character;
+        }
+
+        $turn = 0;
+        while (true) {
+            $turn++;
+//            $result .= "@@@回合开始"; 暂时不需要显示回合了
+            // 所有角色依据顺序各动一次
+            foreach ($all as $sortOne) {
+                if ($sortOne->username == $user->username) {
+                    // 我方$run角色行动
+                    $run = $associatedWe[$sortOne->name];
+                    if ($run->hp > 0) {
+                        $result .= "@@@我方";
+                        $targetKey = $this->getRandKeyAlive($associatedEnemy);
+                        $associatedEnemy[$targetKey]->hp -= ($run->atk - $associatedEnemy[$targetKey]->def);
+                        $record['totalDamage'] += ($run->atk - $associatedEnemy[$targetKey]->def);
+                        $result .= $run->name."攻击了".$associatedEnemy[$targetKey]->name;
+                        // 死亡检测
+                        $fin = 1;
+                        foreach ($associatedEnemy as $o) {
+                            if ($o->hp > 0) {
+                                $fin = 0;
+                            }
+                        }
+                        if ($fin == 1) {
+//                            $result .= "@@@战斗结束我方胜利";
+                            $record['win'] = 1;
+                            return $record;
+                        }
+                    }
+                }
+                else {
+                    // 敌方$run角色行动
+                    $run = $associatedEnemy[$sortOne->name];
+                    if ($run->hp > 0) {
+                        $result .= "@@@敌方";
+                        $targetKey = $this->getRandKeyAlive($associatedWe);
+                        $associatedWe[$targetKey]->hp -= ($run->atk - $associatedWe[$targetKey]->def);
+                        $result .= $run->name."攻击了".$associatedWe[$targetKey]->name;
+                        // 死亡检测
+                        $fin = 1;
+                        foreach ($associatedWe as $o) {
+                            if ($o->hp > 0) {
+                                $fin = 0;
+                            }
+                        }
+                        if ($fin == 1) {
+//                            $result .= "@@@战斗结束敌方胜利";
+                            $record['win'] = 0;
+                            return $record;
+                        }
+                    }
+                }
+            }
+            // 测试只走一回合
+            if ($turn == 30) {
+//                $result .= "@@@战斗结束平局";
+                $record['win'] = 2;
+                return $record;
+            }
+        }
+    }
+
+    function getRandKeyAlive($associated) {
+        $associated = array_filter($associated, function ($value) {
+            return $value->hp > 0;
+        });
+        $keys = array_keys($associated);
+        $random_key = $keys[array_rand($keys)];
+        return $random_key;
+    }
+
+    function getEnemyArray($user, $num) {
+        $randomMembers = NexusDB::table("custom_team_member")
+        ->where('user_id', '!=', $user->id)
+        ->inRandomOrder()
+        ->limit($num)
+        ->get();
+        $array = [];
+        foreach ($randomMembers as $one) {
+            $array[] = $one;
+        }
+        return $array;
     }
 
     // 抽卡主方法, 从众多角色名称中抽$times次
@@ -170,12 +334,14 @@ class CustomTeamRepository extends BaseRepository
         $keys = array();
         for ($i = 0; $i < $times; $i++) {
             $randKey = array_rand($array);
-            if (rand(1, 100) <= 20) {
+            if (rand(1, 100) <= 16) {
                 $keys[] = $this->getUpMemberName();// 抽到up角色
             } else {
                 $keys[] = $randKey; // 抽到普通角色
             }
-
+        }
+        if (!in_array($this->getUpMemberName(), $keys)) {
+            $keys = array_replace($keys, array(0 => $this->getUpMemberName()));
         }
         return $keys;
     }
@@ -190,8 +356,11 @@ class CustomTeamRepository extends BaseRepository
         $upMemberName = array_keys($array)[$index];
         return $upMemberName;
     }
-    function gachaOncePrice() {
-        return 6480;
+    public function gachaOncePrice() {
+        $start_date = strtotime('2023-12-18 00:00:00');
+        $today_date = strtotime(date('Y-m-d 00:00:00'));
+        $days_since_start = floor(($today_date - $start_date) / (60 * 60 * 24));
+        return 10000 + $days_since_start * 10;
     }
 
     function changeInfoStringToArray($string) {
@@ -237,22 +406,30 @@ class CustomTeamRepository extends BaseRepository
             // 生成随机的 def 属性
             $def = mt_rand(6, 11);
             $array['def'] = $def;
+            // 限定角色初始属性更高一点
+            if (strpos($array['info'], "限定")) {
+                $array['atk'] = $array['atk'] + 8;
+                $array['hp'] = $array['hp'] + 20;
+                $array['def'] = $array['def'] + 4;
+            }
         } else {
             // 随机选择升级的属性
-            $upgradeAttribute = mt_rand(1, 3);
+            $upgradeAttribute = mt_rand(1, 5);
             // 根据选择的属性进行升级
             switch ($upgradeAttribute) {
                 case 1:
+                case 2:
                     // 升级 hp
                     $hpIncrease = mt_rand(12, 22);
                     $array['hp'] += $hpIncrease;
                     break;
-                case 2:
+                case 3:
+                case 4:
                     // 升级 atk
                     $atkIncrease = mt_rand(1, 4);
                     $array['atk'] += $atkIncrease;
                     break;
-                case 3:
+                case 5:
                     // 升级 def
                     $defIncrease = mt_rand(1, 3);
                     $array['def'] += $defIncrease;
@@ -269,15 +446,15 @@ class CustomTeamRepository extends BaseRepository
             "巨巨"=>"巨巨 [象岛居民]♂<br>悠闲B型, 象, 生日7月14日<br>口头禅：象象",
             "阿三"=>"阿三 [象岛居民]♂<br>悠闲B型, 象, 生日10月3日<br>口头禅：哈啊",
             "艾勒芬"=>"艾勒芬 [象岛居民]♀<br>成熟B型, 象, 生日12月8日<br>口头禅：鲁鲁",
-            "鲨鲨"=>"鲨鲨 [结缘限定]♀<br>元气A型, 鱼, 生日6月20日<br>口头禅：Shaaaaaark！",
             "啡卡"=>"啡卡 [象岛居民]♀<br>元气A型, 象, 生日3月6日<br>口头禅：大耳",
             "茉莉"=>"茉莉 [象岛居民]♀<br>普通A型, 象, 生日11月18日<br>口头禅：呼",
             "保罗"=>"保罗 [象岛居民]♂<br>悠闲A型, 象, 生日5月5日<br>口头禅：保罗",
             "庞克斯"=>"庞克斯 [象岛居民]♂<br>暴躁A型, 象, 生日6月9日<br>口头禅：摇滚",
-            "叶天帝"=>"叶天帝 [结缘限定]♂<br>悠闲A型, 人, 生日10月29日<br>口头禅：可叹,落叶飘零~",
             "大大"=>"大大 [象岛居民]♂<br>运动B型, 象, 生日3月23日<br>口头禅：嘻嘻",
             "泡芙"=>"泡芙 [象岛居民]♀<br>普通A型, 象, 生日5月12日<br>口头禅：啦啷",
             "阿原"=>"阿原 [象岛居民]♂<br>悠闲A型, 象, 生日9月7日<br>口头禅：毛毛",
+            "鲨鲨"=>"鲨鲨 [结缘限定]♀<br>元气A型, 鱼, 生日6月20日<br>口头禅：Shaaaaaark！",
+            "叶天帝"=>"叶天帝 [结缘限定]♂<br>悠闲A型, 人, 生日10月29日<br>口头禅：可叹,落叶飘零~",
             "麒麟9000s"=>"麒麟9000s [结缘限定]♀<br>成熟B型, 麒麟, 生日12月2日<br>口头禅：安逸的氛围…喜欢",
         ];
         return $array;
@@ -303,9 +480,9 @@ class CustomTeamRepository extends BaseRepository
         return $array;
     }
 
-    public function shoutbox($user_id, $text) {
+    public function shoutbox($text) {
         $shoutDO = [
-            "userid"=>$user_id,
+            "userid"=>1,
             "date"=>time(),
             "text"=>$text,
             "type"=>"sb"
@@ -317,7 +494,56 @@ class CustomTeamRepository extends BaseRepository
         NexusDB::table("users")->where("id",$id)->update($updateArray);
     }
 
+    public function getTodayVsType() {
+        $weekDay = intval(getWeekDayNumber());
+        switch ($weekDay) {
+            case 1:
+            case 3:
+                return 0;
+            case 2:
+            case 4:
+                return 1;
+            case 5:
+            case 6:
+            case 7:
+                return 2;
+        }
+    }
+    public function getVsTypeList() {
+        $arr = [
+            "锋芒交错 - 1v1", // 用户手动选一个角色参与1v1
+            "龙与凤的抗衡 - 团战 5v5", // 用户手动选择五个角色参与5v5
+            "世界boss - 对抗Sysrous" // 用户全体角色一起上
+        ];
+        return $arr;
+    }
+
     function getTeamMember($id) {
         return NexusDB::table("custom_team_member")->where("id",$id)->first();
     }
+//    function getChapter() {
+//        $array = [
+//            "竞技之魂：起源之旅",
+//            "角斗士的崛起：征服竞技场",
+//            "力量之路：拯救小象王国",
+//            "迷失的竞技场：向未知挑战",
+//            "神秘传承：解开古老的谜题",
+//            "勇敢的战士：保卫家园的战斗",
+//            "猎人的挑战：捕捉稀有的巨兽",
+//            "小象学院：培养下一代竞技英雄",
+//            "传奇决斗：与英雄对决解锁传说",
+//            "黑暗威胁：摧毁邪恶势力的阴谋",
+//            "竞技盟约：建立竞技联盟",
+//            "英雄试炼：向最强战士发起挑战",
+//            "荣耀归来：重返竞技场之巅",
+//            "神秘遗迹：探索失落的战场",
+//            "毁灭之战：对抗毁灭者的入侵",
+//            "王者传承：夺取象岛王位的血脉之争",
+//            "跨越边界：穿越时空展开史诗对决",
+//            "幻灭幽影：揭开竞技场的幽暗秘密",
+//            "龙战：挑战恶龙保卫王国的传说",
+//            "无尽挑战：面对不停增强的敌人"
+//        ];
+//        return $array;
+//    }
 }
