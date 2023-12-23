@@ -26,10 +26,90 @@
 /*战斗场地%%%%%%%%%%%%%%%%%%%%%%%%%*/
 /*战斗场地%%%%%%%%%%%%%%%%%%%%%%%%%*/
 /*战斗场地%%%%%%%%%%%%%%%%%%%%%%%%%*/
+/*测试用的向下移动的动画效果*/
+#battleResultStringLastShow {
+	display: none;
+}
+@keyframes slideRight {
+	0% {
+		transform: translateX(0);
+	}
+	20% {
+		transform: translateX(0) rotate(360deg);
+	}
+	40% {
+		transform: translateX(0) rotate(450deg);
+	}
+	99% {
+		transform: translateX(700px) rotate(450deg);
+	}
+	100% {
+		transform: translateX(0) rotate(0deg);
+	}
+}
+@keyframes slideLeft {
+	0% {
+		transform: scale(1);
+	}
+	50% {
+		transform: scale(2);
+	}
+	100% {
+		transform: scale(1);
+	}
+}
+.bf_member_left {
+	animation-name: slideRight;/*动画*/
+}
+.bf_member_right {
+	animation-name: slideLeft;/*动画*/
+	/*-webkit-filter: sepia(50%); !* 添加褐色效果 *!*/
+	/*filter: sepia(50%); !* 其他浏览器的兼容写法 *!*/
+	/*-webkit-filter: hue-rotate(90deg); !* 旋转90度 *!*/
+	/*filter: hue-rotate(90deg); !* 其他浏览器的兼容写法 *!*/
+}
+.bf_member {
+	position: relative;/*可以偏移自己原来的位置, 但自己的位置不会被抢走那块是空的停车位*/
+	height: 75px;
+	/*opacity: 0.2;*/
+
+	animation-iteration-count: 1;/*次数*/
+	animation-duration: 1s; /* 动画时长 */
+	animation-delay: 9999s; /* 延迟播放时间 */
+	animation-fill-mode: forwards; /* 动画结束后保持最后一帧 */
+}
 .battlefield {
-	width: 700px;
-	height: 500px;
-	background-color: darkgray;
+	/*padding-top: 44px;*/
+	/*padding-left: 14px;*/
+	/*padding-right: 30px;*/
+	/*width: 500px;*/
+	/*height: 356px;*/
+	padding-top: 66px;
+	padding-left: 21px;
+	padding-right: 45px;
+	width: 750px;
+	height: 534px;
+	background-image: url("https://pic.ziyuan.wang/user/zhengbanwansui/2023/12/草地_154c577ed6e7e.png");
+	background-size: contain;
+	background-repeat: no-repeat;
+	display: flex;
+}
+.bf_left {
+	flex: 1;
+}
+.bf_center {
+	flex: 1;
+}
+.bf_right {
+	flex: 1;
+}
+@keyframes rotate {
+	from {
+		transform: rotate(0deg);
+	}
+	to {
+		transform: rotate(360deg);
+	}
 }
 /*战斗场地Fin%%%%%%%%%%%%%%%%%%%%%%%*/
 /*战斗场地Fin%%%%%%%%%%%%%%%%%%%%%%%*/

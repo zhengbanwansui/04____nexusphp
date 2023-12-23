@@ -165,6 +165,9 @@ class CustomTeamRepository extends BaseRepository
     // 随机对战
     // 随机对战
     public function vs($user, $teamMember, $memberIndexStr) {
+        if (strlen($memberIndexStr) == 0) {
+            throw new NexusException("选中上场的角色为空");
+        }
         // 获取用户信息
         $user = $this->getUser($user);
         $we = [];
@@ -182,7 +185,13 @@ class CustomTeamRepository extends BaseRepository
                     // 获取敌人
                     $enemy = $this->getEnemyArray($user, 1);
                     // 战斗
-                    $this->vsTemplate($user, $we, $enemy, $result);
+                    $record = $this->vsTemplate($user, $we, $enemy, $result);
+                    // 奖励
+                    if ($record['win'] == 1) {
+                        $prize = 1000;
+                    } else {
+                        $prize = 100;
+                    }
                     break;
                 case 1:// 5v5
                     if(count($we) != 5) {
@@ -191,17 +200,43 @@ class CustomTeamRepository extends BaseRepository
                     // 获取敌人
                     $enemy = $this->getEnemyArray($user, 5);
                     // 战斗
-                    $this->vsTemplate($user, $we, $enemy, $result);
+                    $record = $this->vsTemplate($user, $we, $enemy, $result);
+                    // 奖励
+                    if ($record['win'] == 1) {
+                        $prize = 1200;
+                    } else {
+                        $prize = 120;
+                    }
                     break;
                 case 2:// NvBoss
+                    if(count($we) < 1) {
+                        throw new NexusException("选中上场的角色数量应该至少为1个 你上场了=".count($we)." str=".$memberIndexStr);
+                    }
                     // 获取敌人
                     $enemy = $this->getEnemyArray($user, 1);
+                    $enemy[0]->hp = 10000;
+                    $enemy[0]->username = "站长";
                     // 战斗
                     $record = $this->vsTemplate($user, $we, $enemy, $result);
                     $totalDamage = $record['totalDamage'];
-
+                    $idOneSeedbonus = NexusDB::table("users")->where("id", 1)->first()->seedbonus;
+                    $prize = $idOneSeedbonus/130000 + $totalDamage / 3;
                     break;
             }
+            $timeId = time();
+            // 入库战斗记录
+            NexusDB::table("custom_team_battle")->insert([
+                "id"=>$timeId,
+                "user_id"=>$user->id,
+                "info"=>$result,
+                "win"=>$record['win'],
+                "prize"=>$prize
+            ]);
+            // 增加魔力奖励
+            NexusDB::table("users")->where("id", $user->id)->update(
+                ["seedbonus"=>bcadd($user->seedbonus, $prize)]
+            );
+            $result = "战斗结果=".$timeId;
         });
         return $result;
     }
@@ -254,12 +289,16 @@ class CustomTeamRepository extends BaseRepository
                     // 我方$run角色行动
                     $run = $associatedWe[$sortOne->name];
                     if ($run->hp > 0) {
-                        $result .= "@@@我方";
+                        $result .= "@@@we_";
                         $targetKey = $this->getRandKeyAlive($associatedEnemy);
                         $associatedEnemy[$targetKey]->hp -= ($run->atk - $associatedEnemy[$targetKey]->def);
                         $record['totalDamage'] += ($run->atk - $associatedEnemy[$targetKey]->def);
-                        $result .= $run->name."攻击了".$associatedEnemy[$targetKey]->name;
-                        // 死亡检测
+                        $result .= $run->name."攻击了enemy_".$associatedEnemy[$targetKey]->name;
+                        // 单体死亡检测
+                        if ($associatedEnemy[$targetKey]->hp <=0) {
+                            $result .= "@@@died=enemy_".$associatedEnemy[$targetKey]->name;
+                        }
+                        // 团队死亡检测
                         $fin = 1;
                         foreach ($associatedEnemy as $o) {
                             if ($o->hp > 0) {
@@ -277,11 +316,15 @@ class CustomTeamRepository extends BaseRepository
                     // 敌方$run角色行动
                     $run = $associatedEnemy[$sortOne->name];
                     if ($run->hp > 0) {
-                        $result .= "@@@敌方";
+                        $result .= "@@@enemy_";
                         $targetKey = $this->getRandKeyAlive($associatedWe);
                         $associatedWe[$targetKey]->hp -= ($run->atk - $associatedWe[$targetKey]->def);
-                        $result .= $run->name."攻击了".$associatedWe[$targetKey]->name;
-                        // 死亡检测
+                        $result .= $run->name."攻击了we_".$associatedWe[$targetKey]->name;
+                        // 单体死亡检测
+                        if ($associatedWe[$targetKey]->hp <=0) {
+                            $result .= "@@@died=we_".$associatedWe[$targetKey]->name;
+                        }
+                        // 团队死亡检测
                         $fin = 1;
                         foreach ($associatedWe as $o) {
                             if ($o->hp > 0) {

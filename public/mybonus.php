@@ -14,6 +14,7 @@ parked();
 $teamDao = new \App\Repositories\CustomTeamRepository();
 $turnipDaily = getTodayTurnip();
 $teamMember = getTeamMember();
+$teamPic = $teamDao->getTeamPic();
 $vsType = $teamDao->getVsTypeList();
 function getMaxLoan() {
     return 300000;
@@ -119,10 +120,11 @@ function bonusarray($option = 0){
     global $turnipDaily;
     global $teamMember;
     global $vsType;
+    global $teamPic;
     $oldRecord = getTurnip();
     $profit = getProfit();
     $teamPiece = getTeamPiece();
-    $teamPic = $teamDao->getTeamPic();
+
 
     $results = [];
 
@@ -132,7 +134,7 @@ function bonusarray($option = 0){
     $bonus['art'] = 'vs';
     $bonus['menge'] = 0; // 1gb的字节数
     $bonus['name'] = "<b style='color: #ff8000;'>小象友善竞技场【<b style='color: red'>".$vsType[$teamDao->getTodayVsType()]."</b> 战场已开启】</b>"; // text
-    $bonus['description'] = "";
+    $bonus['description'] = "周一和周三是锋芒交错的时刻，1v1的激烈对决等着您；<br>周二周四上演龙与凤的抗衡，5v5的团战战场精彩纷呈；<br>周五、周六和周日，世界boss<Sysrous>将降临，勇士们齐心协力，挑战最强BOSS，获得奖励Sysrous魔力/130000+总伤害/3的象草<br>点击选择你要派上场的角色，进入竞技场与众多玩家一同展开激烈对抗吧！";
     $results[] = $bonus;
 
     // 英灵殿角色展示
@@ -655,7 +657,6 @@ if (isset($do)) {
                 $url = $teamDao->getTeamPic()[$name];
                 $msg = $msg.
                     "<div class='piecePicBackground'><img class='piecePic' src='".$url."' /></div>";
-//                    "<img class='pieceBorder' style='width:40px' src='".$url."' />";
             }
             $msg = $do."<br>".$msg;
         }
@@ -682,16 +683,48 @@ if (!$action) {
     // 如果有信息, 则输出信息
     if ($msg) {
         print("<tr><td align=\"center\" colspan=\"4\">");
-        if (strpos($msg, "开始战斗")) {
-            print("
-<div class='battlefield'>
-<div class='bf_left'></div>
-<div class='bf_center'></div>
-<div class='bf_right'></div>
-</div>
-");
+        if (strpos("xxx".$msg, "战斗结果")) {
+            // 从$msg中根据id获取完整的$msg
+            $battleDO = NexusDB::table("custom_team_battle")->where("id", explode("=", $msg)[1])->first();
+            $msg = $battleDO->info;
+//            throw new NexusException($msg,666);
+            print("<input id='battleMsgInput' type='hidden' value='".$msg."'>");
+            global $teamPic;
+            // 取出双方的角色摆上去index=2 我方 index=4敌方
+            $msgArray = explode("@@@", $msg);
+            $weStr = $msgArray[2];
+            $enemyStr = $msgArray[4];
+            preg_match_all('/\[(.*?)\]/', $weStr, $matches);
+            $we = $matches[1];
+            preg_match_all('/\[(.*?)\]/', $enemyStr, $matches);
+            $enemy = $matches[1];
+            print("<div id='battleResultStringLastShow'>");
+                $fightText = str_replace("@@@", "<br>", $msg);
+                print("<div class='striking'>". strstr($fightText, "开始战斗", true) ."</div>");
+                if ($battleDO->win == 0) {
+                    $winText = "战败";
+                } else if ($battleDO->win == 1) {
+                    $winText = "胜利";
+                }else if ($battleDO->win == 2) {
+                    $winText = "平局";
+                }
+                $winText .= " - 获得奖励：".$battleDO->prize."象草";
+                print("<div class='striking'>". $winText ."</div>");
+            print("</div>");
+            print("<div class='battlefield' onload='battle()'><div class='bf_left'>");
+            foreach ($we as $one) {
+                print("<img id='"."we_".$one."' class='bf_member bf_member_left' src='".$teamPic[$one]."'>");
+            }
+            print("</div><div class='bf_center'>");
+
+            print("</div><div class='bf_right'>");
+            foreach ($enemy as $one) {
+                print("<img id='"."enemy_".$one."' class='bf_member bf_member_right' src='".$teamPic[$one]."'>");
+            }
+            print("</div></div>");
+        } else {
+            print("<div class='striking'>".'text2'.$msg."</div>");
         }
-        print("<div class='striking'>". $msg ."</div>");
         print("</td></tr>");
     }
     ?>
@@ -831,23 +864,10 @@ if (!$action) {
             // 竞技场的战斗按钮
             global $teamDao;
             global $vsType;
-            switch ($teamDao->getTodayVsType()) {
-                case 0:
-                    print("<td class=\"rowfollow\" align=\"center\">
-                        <input id='vs_member_id' type='text' name='vs_member_name'>
-                        <input id='vs_submit' type=\"submit\" name=\"submit\" value='锋芒交错 - 1v1' /></td>");
-                    break;
-                case 1:
-                    print("<td class=\"rowfollow\" align=\"center\">
-                        <input id='vs_member_id' type='text' name='vs_member_name'>
-                        <input type=\"submit\" name=\"submit\" value='龙与凤的抗衡 - 团战 5v5' /></td>");
-                    break;
-                case 2:
-                    print("<td class=\"rowfollow\" align=\"center\">
-                        <input id='vs_member_id' type='text' name='vs_member_name'>
-                        <input type=\"submit\" name=\"submit\" value='世界boss - 对抗Sysrous' /></td>");
-                    break;
-            }
+            print("<td class=\"rowfollow\" align=\"center\">");
+            print("<input id='vs_member_id' type='hidden' name='vs_member_name'>");
+            $battleName = $teamDao->getVsTypeList()[$teamDao->getTodayVsType()];
+            print("<input id='vs_submit' type=\"submit\" name=\"submit\" value='".$battleName."' /></td>");
         }
         // [消费类型按钮]
         else if($CURUSER['seedbonus'] >= $bonusarray['points'])
@@ -1371,27 +1391,7 @@ if ($action == "exchange") {
 // JavaScript
 // JavaScript
 // JavaScript
-// member投喂表单选中可用性
 echo "<script>";
-// 先禁止所有input, 然后打开对应角色的input
-echo "
-function enableInputs(element) {
-  var all = document.querySelectorAll('.member > .memberText > input');
-  for (var i = 0; i < all.length; i++) {
-    all[i].disabled = true;
-  }
-  var inputs = element.querySelectorAll('.memberText > input');
-  for (var i = 0; i < inputs.length; i++) {
-    inputs[i].disabled = false;
-  }
-}";
-// 鼠标移开禁止当前input
-echo "function disableInputs(element) {
-  var inputs = element.querySelectorAll('.member > .memberText > input');
-  for (var i = 0; i < inputs.length; i++) {
-    inputs[i].disabled = true;
-  }
-}";
 // 根据当天的战斗类型确定可以选多少人上场
 switch ($teamDao->getTodayVsType()) {
     case 0:$max=1;break;
@@ -1442,7 +1442,7 @@ function selectMember(element) {
 }
 ";
 echo "</script>";
-
+echo "<script src='js/mybonus.js'></script>";
 
 
 // 页尾
