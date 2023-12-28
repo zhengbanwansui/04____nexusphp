@@ -190,7 +190,10 @@ class LuckyDrawRepository extends BasePlugin
                 }
                 // 每月刷新数据
                 if (new DateTime($numDO->update_at) < new DateTime('first day of this month')) {
-                    $updateMonthDO = ["current_num"=> $numDO -> default_num];
+                    $updateMonthDO = [
+                        "current_num"=> $numDO -> default_num,
+                        "update_at"=>date("Y-m-d H:i:s")
+                    ];
                     NexusDB::table("custom_lucky_draw_prizes_num")->where("id", $prize->id)->update($updateMonthDO);
                 }
                 // 重新查数量
