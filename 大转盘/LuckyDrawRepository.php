@@ -188,8 +188,10 @@ class LuckyDrawRepository extends BasePlugin
                     // 没数据的数量无限
                     break;
                 }
-                // 每月刷新数据
-                if (new DateTime($numDO->update_at) < new DateTime('first day of this month')) {
+                // 每月1日0点刷新数据
+                $firstDayZero = new DateTime('first day of this month');
+                $firstDayZero->setTime(0, 0, 0);
+                if (new DateTime($numDO->update_at) < $firstDayZero) {
                     $updateMonthDO = [
                         "current_num"=> $numDO -> default_num,
                         "update_at"=>date("Y-m-d H:i:s")
