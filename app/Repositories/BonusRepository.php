@@ -806,7 +806,7 @@ class BonusRepository extends BaseRepository
             "text"=>$text,
             "type"=>"sb"
         ];
-        NexusDB::table("shoutbox")->insert($shoutDO);
+        NexusDB::table("custom_broadcastbox")->insert($shoutDO);
     }
 
     function getWeekDayNumber() {

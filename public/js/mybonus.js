@@ -87,3 +87,4 @@ function disableInputs(element) {
         inputs[i].disabled = true;
     }
 }
+

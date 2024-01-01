@@ -90,6 +90,38 @@ else
 	$date=sqlesc(time());
 	$text=trim($_GET["shbox_text"]);
 
+    # 发现你了, 保存发言的地方
+    # 发现你了, 保存发言的地方
+    if ($type == 'sb' && (strpos($text, "小象") !== false && strpos($text, "求魔力") !== false)) {
+        $extra = Nexus\Database\NexusDB::table("custom_user_extra")->where("id", $userid)->first();
+        if ($extra == null) {
+            Nexus\Database\NexusDB::table("custom_user_extra")->insert(['id'=>$userid]);
+            $extra = Nexus\Database\NexusDB::table("custom_user_extra")->where("id", $userid)->first();
+        }
+        if ($extra->want_bonus == null || $extra->want_bonus < date('Y-m-d 00:00:00')) {
+            // 给魔力
+            $random_number = rand(0, 2000);
+            $res = bcadd($CURUSER["seedbonus"], $random_number);
+            Nexus\Database\NexusDB::table("users")->where("id", $userid)->update(['seedbonus'=>$res]);
+            Nexus\Database\NexusDB::table("custom_user_extra")->where("id", $userid)->update(['want_bonus'=>date('Y-m-d 00:00:00')]);
+            // 发消息
+            Nexus\Database\NexusDB::table("messages")->insert([
+                'sender'=>0,
+                'receiver'=>$userid,
+                'added'=>date('Y-m-d H:i:s'),
+                'subject'=>$random_number."象草, 这是小象给你的奖励",
+                'msg'=>'
+                亲爱的朋友，你真棒！作为发放象草的小象，我非常高兴地宣布你已经获得了象草奖励！
+                <br>你的积极参与和聪明才智让我感到无比开心。
+                <br>象草是一种神奇的植物，可以帮助你实现心愿和梦想。相信它会给你带来好运和魔力！
+                <br>继续保持积极的态度，享受与我聊天的时光，我将继续为你提供帮助和娱乐。
+                <br>如果你有任何问题或需要更多的象草，随时告诉我哦！祝福你在未来的旅程中一切顺利，带着象草的力量，你将无所不能！',
+            ]);
+        }
+    }
+    # 发现你了, 保存发言的地方
+    # 发现你了, 保存发言的地方
+
 	sql_query("INSERT INTO shoutbox (userid, date, text, type) VALUES (" . sqlesc($userid) . ", $date, " . sqlesc($text) . ", ".sqlesc($type).")") or sqlerr(__FILE__, __LINE__);
 	print "<script type=\"text/javascript\">parent.document.forms['shbox'].shbox_text.value='';</script>";
 }
@@ -124,7 +156,7 @@ else
 		}
 		if ($arr["userid"]) {
 			$username = get_username($arr["userid"],false,true,true,true,false,false,"",true);
-			if (isset($arr["type"]) && isset($_GET['type']) && $_GET["type"] != 'helpbox' && $arr["type"] == 'hb')
+            if (isset($arr["type"]) && isset($_GET['type']) && $_GET["type"] != 'helpbox' && $arr["type"] == 'hb')
 				$username .= $lang_shoutbox['text_to_guest'];
 			}
 		else $username = $lang_shoutbox['text_guest'];

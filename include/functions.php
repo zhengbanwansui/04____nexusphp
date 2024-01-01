@@ -235,7 +235,7 @@ function formatImg($src, $enableImageResizer, $image_max_width, $image_max_heigh
         write_log($msg, "mod");
         return "";
     }
-	return addTempCode("<img style=\"max-width: 100%\" id=\"$imgId\" alt=\"image\" src=\"$src\" " .($enableImageResizer ?  " onload=\"Scale(this,$image_max_width,$image_max_height);\" onclick=\"Preview(this);\"" : "") .  " referrerpolicy=\"never\"/>");
+	return addTempCode("<img style=\"max-width: 100%\" id=\"$imgId\" alt=\"image\" src=\"$src\"" .($enableImageResizer ?  " onload=\"Scale(this,$image_max_width,$image_max_height);\" onclick=\"Preview(this);\"" : "") .  " />");
 }
 
 function formatFlash($src, $width, $height) {
@@ -1088,33 +1088,6 @@ if ($enableattach_attachment == 'yes'){
 <tr>
 <td colspan="2" valign="middle">
 <iframe src="<?php echo getSchemeAndHttpHost()?>/attachment.php" width="100%" height="24" frameborder="0" scrolling="no" marginheight="0" marginwidth="0"></iframe>
-<tr></tr>
-<script async="" src="//img.ptvicomo.net/js/blueimp-file-upload/jquery.fileupload.js"></script>
-<script>
-$(function () {
-    $('button[data-chevereto-pup-trigger]').fileupload({
-        url: 'https://img.ptvicomo.net/upload',
-        dataType: 'json',
-        autoUpload: false,
-        acceptFileTypes: /(\.|\/)(gif|jpe?g|png)$/i,
-        maxFileSize: 5000000, // 5 MB
-        headers: {
-            'Authorization': 'Bearer 3|FbMYydv0BZqSUGd1pRPGVcXKCfeXllCyA1MxmFWp'
-        },
-        add: function (e, data) {
-            data.formData = { file: data.files[0].name }; // Set file name
-            data.context = $('<p/>').text('Uploading...').appendTo(document.body);
-            data.submit();
-        },
-        done: function (e, data) {
-            data.context.text('Upload finished.');
-        }
-    });
-});
-</script>
-<button data-chevereto-pup-trigger="" data-target="#descr">上传至图床</button>
-&nbsp;&nbsp; 支持图片格式：JPG JPEG PNG BMP GIF  限制大小 5 M（仅发布种子时可以使用） &nbsp;&nbsp; <a style="color:blue;font:10px" href="https://img.ptvicomo.net/upload" target="_blank">跳转至图床页面</a>
->
 </td>
 </tr>
 <?php
@@ -1793,7 +1766,7 @@ function show_image_code () {
 		unset($imagehash);
 		$imagehash = image_code () ;
 		print ("<tr><td class=\"rowhead\">".$lang_functions['row_security_image']."</td>");
-		print ("<td align=\"left\"><img src=\"".htmlspecialchars("image.php?action=regimage&imagehash=".$imagehash."&secret=".($_GET['secret'] ?? ''))."\" border=\"0\" alt=\"CAPTCHA\" />  </td></tr>");
+		print ("<td align=\"left\"><img src=\"".htmlspecialchars("image.php?action=regimage&imagehash=".$imagehash."&secret=".($_GET['secret'] ?? ''))."\" border=\"0\" alt=\"CAPTCHA\" /></td></tr>");
 		print ("<tr><td class=\"rowhead\">".$lang_functions['row_security_code']."</td><td align=\"left\">");
 		print("<input type=\"text\" autocomplete=\"off\" style=\"width: 180px; border: 1px solid gray\" name=\"imagestring\" value=\"\" />");
 		print("<input type=\"hidden\" name=\"imagehash\" value=\"$imagehash\" /></td></tr>");
@@ -2211,7 +2184,7 @@ function mkprettytime($s) {
 	}
 
 	if ($t["day"])
-	return $t["day"] . ($lang_functions['text_day'] ?? '天') . sprintf("%02d:%02d:%02d", $t["hour"], $t["min"], $t["sec"]);
+	return $t["day"] . ($lang_functions['text_day'] ?? 'day(s)') . sprintf("%02d:%02d:%02d", $t["hour"], $t["min"], $t["sec"]);
 	if ($t["hour"])
 	return sprintf("%d:%02d:%02d", $t["hour"], $t["min"], $t["sec"]);
 	//    if ($t["min"])
@@ -2356,7 +2329,71 @@ function menu ($selected = "home") {
 	    $lang = get_langfolder_cookie();
         $normalSectionName = get_searchbox_value(get_setting('main.browsecat'), 'section_name');
         $specialSectionName = get_searchbox_value(get_setting('main.specialcat'), 'section_name');
+
+
         print ("<ul id=\"mainmenu\" class=\"menu\">");
+        // ##########################################
+        // ##########################################
+        // ##########################################
+        // 菜单种子大按钮
+        print ('<span class="line" style="background-color:#E9E9E9;display: block; height: 17px;width:1px;margin: 0 20px;" ></span>');
+        $one = \Nexus\Database\NexusDB::table("custom_lucky_draw_prizes_num_test")->where("id", 2)->first();
+        print ("<li class='torrents_big_touch' " . ($selected == "torrents" ? " class=\"selected\"" : "") . ">
+        <div style='display: flex; flex-direction: row; align-items: center; margin-right: 30px;'>
+            <a class='torrents_big_buttom' href=\"torrents.php\">" . '种子'. "</a>
+            <img style='margin-left: 10px; width: 18px;' src='https://pic.ziyuan.wang/user/zhengbanwansui/2023/12/xiala_white.839c0e6_5b1feb94ca9ca.png'>
+        </div>");
+        // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+        // @@@@@@@@@@@@种子分类大抽屉@@@@@@@@@@@@
+        print("<div class='torrents_type_container'>");
+        // 遍历显示各个分区
+        $customCategory1 = [
+            "影视综合"=>["全部影视资源", "torrents.php?cat401=1&cat402=1&cat403=1&cat404=1&cat405=1&cat414=1", "https://img.ptvicomo.net/pic/2023/12/31/659108a9125fd.png"],
+            "电影"=>["震撼人心的视觉盛宴", "torrents.php?cat401=1", "https://img.ptvicomo.net/pic/2023/12/31/659108a9125fd.png"],
+            "电视剧"=>["引人入胜的剧情发展", "torrents.php?cat402=1", "https://img.ptvicomo.net/pic/2023/12/31/659108a9125fd.png"],
+            "综艺"=>["欢乐不断的娱乐秀场", "torrents.php?cat403=1", "https://img.ptvicomo.net/pic/2023/12/31/659108a9125fd.png"],
+            "动漫"=>["奇幻世界的无限想象", "torrents.php?cat405=1", "https://img.ptvicomo.net/pic/2023/12/31/659108a9125fd.png"],
+            "纪录片"=>["真实记录的人生故事", "torrents.php?cat404=1", "https://img.ptvicomo.net/pic/2023/12/31/659108a9125fd.png"],
+            "短剧"=>["跌宕起伏的小剧场", "torrents.php?cat414=1", "https://img.ptvicomo.net/pic/2023/12/31/659108a9125fd.png"],
+        ];
+        $customCategory2 = [
+            "电子书"=>["随时随地的阅读伴侣", "special.php?cat411=1", "https://img.ptvicomo.net/pic/2023/12/31/659108a9c1f03.png"],
+            "有声书"=>["享受耳朵的阅读体验", "torrents.php?cat412=1", "https://img.ptvicomo.net/pic/2023/12/31/659108a9c1f03.png"],
+            "字幕"=>["文字化解语言障碍", "torrents.php?cat412=1", "https://img.ptvicomo.net/pic/2023/12/31/659108a9c1f03.png"],
+            "MV"=>["视听盛宴的音乐表演", "torrents.php?cat403=1", "https://img.ptvicomo.net/pic/2023/12/31/659109338602a.png"],
+            "音乐"=>["心灵鸡汤的音乐治愈", "torrents.php?cat405=1", "https://img.ptvicomo.net/pic/2023/12/31/659109338602a.png"],
+            "教育视频"=>["知识普及的生动呈现", "torrents.php?cat404=1", "https://img.ptvicomo.net/pic/2023/12/31/659108a956743.png"],
+            "教育资料"=>["提升学习效率的知识库", "torrents.php?cat414=1", "https://img.ptvicomo.net/pic/2023/12/31/659108a956743.png"],
+        ];
+        $customCategory3 = [
+            "我的收藏"=>["珍藏心爱之作的宝库", "torrents.php?cat412=1", "https://img.ptvicomo.net/pic/2023/12/31/659107ae76819.png"],
+            "我的认领"=>["承担责任的领养之家", "torrents.php?cat412=1", "https://img.ptvicomo.net/pic/2023/12/31/659107ae76819.png"],
+            "发种区"=>["分享喜悦的乐园", "upload.php", "https://img.ptvicomo.net/pic/2023/12/31/659107ae76819.png"],
+            "求种区"=>["寻觅资源的寄托所", "viewrequests.php", "https://img.ptvicomo.net/pic/2023/12/31/659107ae76819.png"],
+            "候选区"=>["等待机会的等候室", "offers.php", "https://img.ptvicomo.net/pic/2023/12/31/659107ae76819.png"],
+        ];
+        $allData = [$customCategory1, $customCategory2, $customCategory3];
+        foreach ($allData as $customCategory) {
+            print("<div class='torrents_flex_container'>");
+            foreach ($customCategory as $name=>$value) {
+                print("
+            <a class='torrents_flex_items' href='".$value[1]."'>
+                <div style='width: 56px; height: 56px;'><img style='width: 56px; height: 56px;' src='".$value[2]."'></div>
+                <div style='padding-left: 18px;text-align: left;'>
+                <div style='font-size: 15px;font-weight: 500;'>".$name."</div>
+                <div style='font-size: 10px;padding-top: 7px;'>".$value[0]."</div>
+                </div>
+            </a>");
+            }
+            print("</div>");
+        }
+        print("</div>");
+        // @@@@@@@@@@@@种子分类大抽屉@@@@@@@@@@@@
+        // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+        print("</li>");
+        // ##########################################
+        // ##########################################
+        // ##########################################
         print ("<li" . ($selected == "home" ? " class=\"selected\"" : "") . "><a href=\"index.php\">" . $lang_functions['text_home'] . "</a></li>");
         if ($enableextforum != 'yes')
             print ("<li" . ($selected == "forums" ? " class=\"selected\"" : "") . "><a href=\"forums.php\">".$lang_functions['text_forums']."</a></li>");
@@ -2402,7 +2439,7 @@ function get_css_row() {
 		while($row = mysql_fetch_array($res)) {
 			$rows[$row['id']] = $row;
 		}
-		$Cache->cache_value('stylesheet_content', $rows, 0);
+		$Cache->cache_value('stylesheet_content', $rows, 95400);
 	}
 	return $rows[$cssid];
 }
@@ -2550,7 +2587,10 @@ $cssupdatedate=($cssupdatedate ? "?".htmlspecialchars($cssupdatedate) : "");
 <link rel="stylesheet" href="<?php echo $css_uri."DomTT.css".$cssupdatedate?>" type="text/css" />
 <link rel="stylesheet" href="styles/curtain_imageresizer.css<?php echo $cssupdatedate?>" type="text/css" />
 <link rel="stylesheet" href="styles/nexus.css<?php echo $cssupdatedate?>" type="text/css" />
-<link rel="stylesheet" href="styles/diy.css" type="text/css" />
+<!--    slide-->
+<link rel="stylesheet" href="js/swiper-bundle.min.css">
+<script src="js/swiper-bundle.min.js"> </script>
+<!--    slide-->
 <?php
 if ($CURUSER){
 //	$caticonrow = get_category_icon_row($CURUSER['caticon']);
@@ -2586,6 +2626,35 @@ foreach (\Nexus\Nexus::getAppendHeaders() as $value) {
 </head>
 <body>
 <table class="head" cellspacing="0" cellpadding="0" align="center" style="width: <?php echo isset($GLOBALS['CURUSER']) ? CONTENT_WIDTH + 28.66 : CONTENT_WIDTH ?>px">
+    <!--banner-->
+    <div class="swiper">
+        <div class="swiper-wrapper">
+<!--            ################################-->
+<!--            元旦-->
+<a class="swiper-slide" data-swiper-autoplay="5000" href="https://ptvicomo.net/torrents.php?incldead=1&spstate=0&inclbookmarked=0&size_begin=&size_end=&seeders_begin=&seeders_end=&leechers_begin=&leechers_end=&times_completed_begin=&times_completed_end=&added_begin=&added_end=&search=%E6%B4%9B%E5%9F%BA&search_area=0&search_mode=0">
+<img style="width: 100%;" src="https://img.ptvicomo.net/pic/2023/12/30/658fa331356cb.png"></a>
+<!--            元旦-->
+<a class="swiper-slide" data-swiper-autoplay="5000" href="https://ptvicomo.net/torrents.php?incldead=1&spstate=0&inclbookmarked=0&size_begin=&size_end=&seeders_begin=&seeders_end=&leechers_begin=&leechers_end=&times_completed_begin=&times_completed_end=&added_begin=&added_end=&search=%E6%B4%9B%E5%9F%BA&search_area=0&search_mode=0">
+<img style="width: 100%;" src="https://img.ptvicomo.net/pic/2024/01/01/659210786140d.jpg"></a>
+<!--            快乐岛-->
+<a class="swiper-slide" data-swiper-autoplay="5000" href="https://ptvicomo.net/torrents.php?incldead=1&spstate=0&inclbookmarked=0&size_begin=&size_end=&seeders_begin=&seeders_end=&leechers_begin=&leechers_end=&times_completed_begin=&times_completed_end=&added_begin=&added_end=&search=%E6%B4%9B%E5%9F%BA&search_area=0&search_mode=0">
+<img style="width: 100%;" src="https://img.ptvicomo.net/pic/2023/12/30/658fce73c3e04.jpg"></a>
+
+
+<!--<a class="swiper-slide" data-swiper-autoplay="5000" href="https://ptvicomo.net/torrents.php?incldead=1&spstate=0&inclbookmarked=0&size_begin=&size_end=&seeders_begin=&seeders_end=&leechers_begin=&leechers_end=&times_completed_begin=&times_completed_end=&added_begin=&added_end=&search=%E6%B4%9B%E5%9F%BA&search_area=0&search_mode=0">-->
+<!--                    <img style="width: 100%;" src="https://pic.ziyuan.wang/user/zhengbanwansui/2023/12/banner_83bb975c1083a.png"></a>-->
+<!--<a class="swiper-slide" data-swiper-autoplay="5000" href="https://ptvicomo.net/torrents.php?incldead=1&spstate=0&inclbookmarked=0&size_begin=&size_end=&seeders_begin=&seeders_end=&leechers_begin=&leechers_end=&times_completed_begin=&times_completed_end=&added_begin=&added_end=&search=%E6%B4%9B%E5%9F%BA&search_area=0&search_mode=0">-->
+<!--                    <img style="width: 100%;" src="https://pic.ziyuan.wang/user/zhengbanwansui/2023/12/banner_50cfa7eb56c3e.jpg"></a>-->
+<!--            ################################-->
+        </div>
+        <!-- 如果需要导航按钮 -->
+        <div class="swiper-button-prev"></div>
+        <div class="swiper-button-next"></div>
+        <!-- 如果需要分页器<div class="swiper-pagination"></div>-->
+        <!-- 如果需要滚动条<div class="swiper-scrollbar"></div>-->
+        <script type="text/javascript" src="js/slide.js"></script>
+    </div>
+    <!--banner-->
 	<tr>
 		<td class="clear">
 <?php
@@ -2599,7 +2668,7 @@ if ($logo_main == "")
 else
 {
 ?>
-			<div class="logo_img"><img src="<?php echo $logo_main?>" alt="<?php echo htmlspecialchars($SITENAME)?>" title="<?php echo htmlspecialchars($SITENAME)?> - <?php echo htmlspecialchars($SLOGAN)?>" /></div>
+    <div class="logo_img"><a href="index.php"><img src="<?php echo $logo_main?>" alt="<?php echo htmlspecialchars($SITENAME)?>" title="<?php echo htmlspecialchars($SITENAME)?> - <?php echo htmlspecialchars($SLOGAN)?>" /></a></div>
 <?php
 }
 ?>
@@ -2657,7 +2726,7 @@ else {
 	if($connect == "yes")
 		$connectable = "<b><font color=\"green\">".$lang_functions['text_yes']."</font></b>";
 	elseif ($connect == 'no')
-		$connectable = "<b><font color=\"green\">".$lang_functions['text_yes']."</font></b>";
+		$connectable = "<a href=\"faq.php#id21\"><b><font color=\"red\">".$lang_functions['text_no']."</font></b></a>";
 	else
 		$connectable = $lang_functions['text_unknown'];
 
@@ -2685,29 +2754,172 @@ else {
     $attendance = $attendanceRep->getAttendance($CURUSER['id'], date('Ymd'))
 ?>
 
+            <!--头像####################################-->
+            <!--头像####################################-->
+            <div class="avatar_touch_box_outside">
+                <div class="avatarPicBackground avatar_touch_box">
+                    <img style="width: 45px;height:45px;" class="avatarPic" src="<?php echo $CURUSER['avatar'] ?>" alt="头像">
+                    <div class="user-info-box">
+                        <!--容器从上到下一字排开-->
+                        <div class="info-container-avatar">
+                            <!--头像-->
+                            <div class="avatarPicBackground" style=" float: left;">
+                                <img class="avatarPic" src="<?php echo $CURUSER['avatar'] ?>" alt="头像">
+                            </div>
+                            <!--用户名和id-->
+                            <div style=" padding-left: 7px; float: left; font-size: 13px">
+                                <div class="<?php echo custom_get_user_lv_class_name($CURUSER['id']) ?>" style="padding-top: 7px;font-size: 13px;font-family: 'Microsoft YaHei', sans-serif; font-weight: bold;">
+                                    <?php echo $CURUSER['username'] ?>
+                                    <?php //echo custom_get_user_name($CURUSER['id']) ?>
+                                </div>
+                                <?php echo custom_get_user_lv($CURUSER['id']) ?>
+                                <div style="color: #7f7f7f; padding-top: 4px;font-size: 10px;font-family: 'Microsoft YaHei', sans-serif;  ">
+                                    UID <?php echo $CURUSER['id'] ?>
+                                    <?php
+                                    $invt = $CURUSER['invites'];
+                                    $invtTemp = \App\Models\Invite::query()->where('inviter', $CURUSER['id'])->where('invitee', '')->where('expired_at', '>', now())->count();
+                                    echo "邀请 ".$invt." 临时邀请 ".$invtTemp;
+                                    echo "&nbsp;&nbsp;&nbsp;↑ " . $activeseed . " ↓ " . $activeleech;
+                                    ?>
+                                </div>
+                                <a style='color: #7f7f7f; padding-top: 4px;font-size: 10px;font-family: 'Microsoft YaHei', sans-serif;' href='userdetails.php?id=<?php echo $CURUSER['id']?>' ">个人信息/佩戴勋章></a>
+                            </div>
+                        </div>
+                        <div class="info-container-data-show">
+                            <div class="info-container-data-show-item">
+                                <div class="item-74751a"><?php echo get_ratio($CURUSER['id'])?></div>
+                                <div class="item-74751b" style="color: #8b0000">分享率</div>
+                            </div>
+                            <div class="info-container-data-show-item">
+                                <div class="item-74751a"><?php echo mksize($CURUSER['uploaded'])?></div>
+                                <div class="item-74751b" style="color: #4394ff">上传</div>
+                            </div>
+                            <div class="info-container-data-show-item">
+                                <div class="item-74751a"><?php echo mksize($CURUSER['downloaded'])?></div>
+                                <div class="item-74751b" style="color: #ff0000">下载</div>
+                            </div>
+                        </div>
+                        <div style="height: 17px;">&nbsp;</div>
+                        <div class="info-container-mybonus-1">
+                            <div style="padding: 18px; 12px;height: 41px;">
+                                <div style="float: left;">
+                                    <div style="font-weight: bold;color: white; font-size: 10px;float: none">当前象草余额</div>
+                                    <div style="font-weight: bold;color: white; font-size: 22px;float: none"><?php echo number_format( $CURUSER['seedbonus'], 0) ?></div>
+                                </div style="float: left;">
+                                <a class="info-container-super-btn-1" href="mybonus.php">兑换奖励</a>
+                            </div>
+                        </div>
+                        <div style="height: 10px;">&nbsp;</div>
+                        <div class="info-container-mybonus-2">
+                            <div style="padding: 18px; 12px;height: 41px;">
+                                <div style="float: left;">
+                                    <div style="font-weight: bold;color: white; font-size: 10px;float: none">当前蔬菜价格</div>
+                                    <div style="font-weight: bold;color: white; font-size: 22px;float: none">
+                                        <?php
+                                        $todayTurnip = \Nexus\Database\NexusDB::table("custom_turnip_calendar")->where("date", date('Y-m-d 00:00:00'))->first();
+                                        echo number_format($todayTurnip->price, 0);
+                                        ?>
+                                    </div>
+                                </div style="float: left;">
+                                <a class="info-container-super-btn-2" href="customgame.php">前往小岛</a>
+                            </div>
+                        </div>
+                        <div style="height: 17px;">&nbsp;</div>
+                        <!--常用功能图标列出-->
+                        <div style="color: black; font-weight: bold; font-size: 12px;margin-left: 22px">功能</div>
+                        <div class="info-container-functions">
+                            <?php
+                            // 菜单名对应一个数组, 数组包含href路径和icon
+                            $nameIconArray = [
+                                '每日签到'=>["attendance.php", '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" data-v-ea893728=""><path fill="currentColor" d="m199.04 672.64 193.984 112 224-387.968-193.92-112-224 388.032zm-23.872 60.16 32.896 148.288 144.896-45.696zM455.04 229.248l193.92 112 56.704-98.112-193.984-112-56.64 98.112zM104.32 708.8l384-665.024 304.768 175.936L409.152 884.8h.064l-248.448 78.336zm384 254.272v-64h448v64h-448z"></path></svg>'],
+                                '收发信息'=>["messages.php",'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" data-v-ea893728=""><path fill="currentColor" d="M128 224v512a64 64 0 0 0 64 64h640a64 64 0 0 0 64-64V224zm0-64h768a64 64 0 0 1 64 64v512a128 128 0 0 1-128 128H192A128 128 0 0 1 64 736V224a64 64 0 0 1 64-64"></path><path fill="currentColor" d="M904 224 656.512 506.88a192 192 0 0 1-289.024 0L120 224zm-698.944 0 210.56 240.704a128 128 0 0 0 192.704 0L818.944 224H205.056"></path></svg>'],
+//                                '我的收藏'=>["torrents.php?inclbookmarked=1&allsec=1&incldead=0",'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" data-v-ea893728=""><path fill="currentColor" d="m512 747.84 228.16 119.936a6.4 6.4 0 0 0 9.28-6.72l-43.52-254.08 184.512-179.904a6.4 6.4 0 0 0-3.52-10.88l-255.104-37.12L517.76 147.904a6.4 6.4 0 0 0-11.52 0L392.192 379.072l-255.104 37.12a6.4 6.4 0 0 0-3.52 10.88L318.08 606.976l-43.584 254.08a6.4 6.4 0 0 0 9.28 6.72zM313.6 924.48a70.4 70.4 0 0 1-102.144-74.24l37.888-220.928L88.96 472.96A70.4 70.4 0 0 1 128 352.896l221.76-32.256 99.2-200.96a70.4 70.4 0 0 1 126.208 0l99.2 200.96 221.824 32.256a70.4 70.4 0 0 1 39.04 120.064L774.72 629.376l37.888 220.928a70.4 70.4 0 0 1-102.144 74.24L512 820.096l-198.4 104.32z"></path></svg>'],
+//                                '我的认领'=>["claim.php?uid=".$CURUSER['id'],'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" data-v-ea893728=""><path fill="currentColor" d="M512 386.88V448h405.568a32 32 0 0 1 30.72 40.768l-76.48 267.968A192 192 0 0 1 687.168 896H336.832a192 192 0 0 1-184.64-139.264L75.648 488.768A32 32 0 0 1 106.368 448H448V117.888a32 32 0 0 1 47.36-28.096l13.888 7.616L512 96v2.88l231.68 126.4a32 32 0 0 1-2.048 57.216zm0-70.272 144.768-65.792L512 171.84zM512 512H148.864l18.24 64H856.96l18.24-64zM185.408 640l28.352 99.2A128 128 0 0 0 336.832 832h350.336a128 128 0 0 0 123.072-92.8l28.352-99.2H185.408"></path></svg>'],
+                                '个人信息'=>["userdetails.php?id=".$CURUSER['id'], '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" data-v-ea893728=""><path fill="currentColor" d="M512 512a192 192 0 1 0 0-384 192 192 0 0 0 0 384m0 64a256 256 0 1 1 0-512 256 256 0 0 1 0 512m320 320v-96a96 96 0 0 0-96-96H288a96 96 0 0 0-96 96v96a32 32 0 1 1-64 0v-96a160 160 0 0 1 160-160h448a160 160 0 0 1 160 160v96a32 32 0 1 1-64 0"></path></svg>'],
+                                '控制面板'=>["usercp.php", '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" data-v-ea893728=""><path fill="currentColor" d="M389.44 768a96.064 96.064 0 0 1 181.12 0H896v64H570.56a96.064 96.064 0 0 1-181.12 0H128v-64zm192-288a96.064 96.064 0 0 1 181.12 0H896v64H762.56a96.064 96.064 0 0 1-181.12 0H128v-64zm-320-288a96.064 96.064 0 0 1 181.12 0H896v64H442.56a96.064 96.064 0 0 1-181.12 0H128v-64z"></path></svg>'],
+                                '发送邀请'=>["invite.php?id=".$CURUSER['id'], '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" data-v-ea893728=""><path fill="currentColor" d="M512 386.88V448h405.568a32 32 0 0 1 30.72 40.768l-76.48 267.968A192 192 0 0 1 687.168 896H336.832a192 192 0 0 1-184.64-139.264L75.648 488.768A32 32 0 0 1 106.368 448H448V117.888a32 32 0 0 1 47.36-28.096l13.888 7.616L512 96v2.88l231.68 126.4a32 32 0 0 1-2.048 57.216zm0-70.272 144.768-65.792L512 171.84zM512 512H148.864l18.24 64H856.96l18.24-64zM185.408 640l28.352 99.2A128 128 0 0 0 336.832 832h350.336a128 128 0 0 0 123.072-92.8l28.352-99.2H185.408"></path></svg>'],
+                                '购买勋章'=>["medal.php", '<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" viewBox="0 0 1024 1024" data-v-ea893728=""><path fill="currentColor" d="m772.13 452.84 53.86-351.81c1.32-10.01-1.17-18.68-7.49-26.02S804.35 64 795.01 64H228.99v-.01h-.06c-9.33 0-17.15 3.67-23.49 11.01s-8.83 16.01-7.49 26.02l53.87 351.89C213.54 505.73 193.59 568.09 192 640c2 90.67 33.17 166.17 93.5 226.5S421.33 957.99 512 960c90.67-2 166.17-33.17 226.5-93.5 60.33-60.34 91.49-135.83 93.5-226.5-1.59-71.94-21.56-134.32-59.87-187.16zM640.01 128h117.02l-39.01 254.02c-20.75-10.64-40.74-19.73-59.94-27.28-5.92-3-11.95-5.8-18.08-8.41V128h.01zM576 128v198.76c-13.18-2.58-26.74-4.43-40.67-5.55-8.07-.8-15.85-1.2-23.33-1.2-10.54 0-21.09.66-31.64 1.96a359.844 359.844 0 0 0-32.36 4.79V128zm-192 0h.04v218.3c-6.22 2.66-12.34 5.5-18.36 8.56-19.13 7.54-39.02 16.6-59.66 27.16L267.01 128zm308.99 692.99c-48 48-108.33 73-180.99 75.01-72.66-2.01-132.99-27.01-180.99-75.01S258.01 712.66 256 640c2.01-72.66 27.01-132.99 75.01-180.99 19.67-19.67 41.41-35.47 65.22-47.41 38.33-15.04 71.15-23.92 98.44-26.65 5.07-.41 10.2-.7 15.39-.88.63-.01 1.28-.03 1.91-.03.66 0 1.35.03 2.02.04 5.11.17 10.15.46 15.13.86 27.4 2.71 60.37 11.65 98.91 26.79 23.71 11.93 45.36 27.69 64.96 47.29 48 48 73 108.33 75.01 180.99-2.01 72.65-27.01 132.98-75.01 180.98z"></path><path fill="currentColor" d="M544 480H416v64h64v192h-64v64h192v-64h-64z"></path></svg>'],
+                                '大转盘'=>["plugin/lucky-draw",'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" data-v-ea893728=""><path fill="currentColor" d="M544 894.72a382.336 382.336 0 0 0 215.936-89.472L577.024 622.272c-10.24 6.016-21.248 10.688-33.024 13.696v258.688zm261.248-134.784A382.336 382.336 0 0 0 894.656 544H635.968c-3.008 11.776-7.68 22.848-13.696 33.024l182.976 182.912zM894.656 480a382.336 382.336 0 0 0-89.408-215.936L622.272 446.976c6.016 10.24 10.688 21.248 13.696 33.024h258.688zm-134.72-261.248A382.336 382.336 0 0 0 544 129.344v258.688c11.776 3.008 22.848 7.68 33.024 13.696zM480 129.344a382.336 382.336 0 0 0-215.936 89.408l182.912 182.976c10.24-6.016 21.248-10.688 33.024-13.696zm-261.248 134.72A382.336 382.336 0 0 0 129.344 480h258.688c3.008-11.776 7.68-22.848 13.696-33.024zM129.344 544a382.336 382.336 0 0 0 89.408 215.936l182.976-182.912A127.232 127.232 0 0 1 388.032 544zm134.72 261.248A382.336 382.336 0 0 0 480 894.656V635.968a127.232 127.232 0 0 1-33.024-13.696zM512 960a448 448 0 1 1 0-896 448 448 0 0 1 0 896m0-384a64 64 0 1 0 0-128 64 64 0 0 0 0 128"></path></svg>'],
+                                '排行榜'=>["topten.php",'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" data-v-ea893728=""><path fill="currentColor" d="M416 896V128h192v768zm-288 0V448h192v448zm576 0V320h192v576z"></path></svg>'],
+                                'RSS订阅'=>["getrss.php",'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" data-v-ea893728=""><path fill="currentColor" d="M715.648 625.152 670.4 579.904l90.496-90.56c75.008-74.944 85.12-186.368 22.656-248.896-62.528-62.464-173.952-52.352-248.96 22.656L444.16 353.6l-45.248-45.248 90.496-90.496c100.032-99.968 251.968-110.08 339.456-22.656 87.488 87.488 77.312 239.424-22.656 339.456l-90.496 90.496zm-90.496 90.496-90.496 90.496C434.624 906.112 282.688 916.224 195.2 828.8c-87.488-87.488-77.312-239.424 22.656-339.456l90.496-90.496 45.248 45.248-90.496 90.56c-75.008 74.944-85.12 186.368-22.656 248.896 62.528 62.464 173.952 52.352 248.96-22.656l90.496-90.496zm0-362.048 45.248 45.248L398.848 670.4 353.6 625.152z"></path></svg>'],
+//                            ''=>["",''],
+                                '联系管理'=>["contactstaff.php", '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" data-v-ea893728=""><path fill="currentColor" d="M864 409.6a192 192 0 0 1-37.888 349.44A256.064 256.064 0 0 1 576 960h-96a32 32 0 1 1 0-64h96a192.064 192.064 0 0 0 181.12-128H736a32 32 0 0 1-32-32V416a32 32 0 0 1 32-32h32c10.368 0 20.544.832 30.528 2.432a288 288 0 0 0-573.056 0A193.235 193.235 0 0 1 256 384h32a32 32 0 0 1 32 32v320a32 32 0 0 1-32 32h-32a192 192 0 0 1-96-358.4 352 352 0 0 1 704 0M256 448a128 128 0 1 0 0 256zm640 128a128 128 0 0 0-128-128v256a128 128 0 0 0 128-128"></path></svg>'],
+                                '站点规则'=>["rules.php", '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" data-v-ea893728=""><path fill="currentColor" d="M640 608h-64V416h64zm0 160v160a32 32 0 0 1-32 32H416a32 32 0 0 1-32-32V768h64v128h128V768zM384 608V416h64v192zm256-352h-64V128H448v128h-64V96a32 32 0 0 1 32-32h192a32 32 0 0 1 32 32z"></path><path fill="currentColor" d="m220.8 256-71.232 80 71.168 80H768V256H220.8zm-14.4-64H800a32 32 0 0 1 32 32v224a32 32 0 0 1-32 32H206.4a32 32 0 0 1-23.936-10.752l-99.584-112a32 32 0 0 1 0-42.496l99.584-112A32 32 0 0 1 206.4 192m678.784 496-71.104 80H266.816V608h547.2l71.168 80zm-56.768-144H234.88a32 32 0 0 0-32 32v224a32 32 0 0 0 32 32h593.6a32 32 0 0 0 23.936-10.752l99.584-112a32 32 0 0 0 0-42.496l-99.584-112A32 32 0 0 0 828.48 544z"></path></svg>'],
+                                '常见问题'=>["faq.php", '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" data-v-ea893728=""><path fill="currentColor" d="M512 64a448 448 0 1 1 0 896 448 448 0 0 1 0-896m0 832a384 384 0 0 0 0-768 384 384 0 0 0 0 768m48-176a48 48 0 1 1-96 0 48 48 0 0 1 96 0m-48-464a32 32 0 0 1 32 32v288a32 32 0 0 1-64 0V288a32 32 0 0 1 32-32"></path></svg>'],
+                            ];
+                            foreach ($nameIconArray as $menuName => $infoArr) {
+                                print("<a class='info-container-icon-a' href='".$infoArr[0]."'>");
+                                print("<div style='height: 70px; width: 43px; padding: 3px 16px 2px 16px;'>");
+                                print("<div style='color: #ff7f7f;width: 33px; padding-left: 5px; padding-right: 5px; padding-top: 10px;'>" .$infoArr[1]."</div>");
+                                print("<div style='text-align: center;color: black;font-size: 10px; font-weight: bold; margin: 10px auto'>".$menuName ."</div>");
+                                print("</div></a>");
+                            }
+                            // 管理权限工具
+                            $nameIconArrayManager = [];
+                            if (get_user_row($CURUSER['id'])['class'] >= 13) {
+                                $nameIconArrayManager['管理面板']=["staffpanel.php",'<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" viewBox="0 0 1024 1024" data-v-ea893728=""><path fill="currentColor" d="M938.67 512.01c0-44.59-6.82-87.6-19.54-128H682.67a212.372 212.372 0 0 1 42.67 128c.06 38.71-10.45 76.7-30.42 109.87l-182.91 316.8c235.65-.01 426.66-191.02 426.66-426.67z"></path><path fill="currentColor" d="M576.79 401.63a127.92 127.92 0 0 0-63.56-17.6c-22.36-.22-44.39 5.43-63.89 16.38s-35.79 26.82-47.25 46.02a128.005 128.005 0 0 0-2.16 127.44l1.24 2.13a127.906 127.906 0 0 0 46.36 46.61 127.907 127.907 0 0 0 63.38 17.44c22.29.2 44.24-5.43 63.68-16.33a127.94 127.94 0 0 0 47.16-45.79v-.01l1.11-1.92a127.984 127.984 0 0 0 .29-127.46 127.957 127.957 0 0 0-46.36-46.91"></path><path fill="currentColor" d="M394.45 333.96A213.336 213.336 0 0 1 512 298.67h369.58A426.503 426.503 0 0 0 512 85.34a425.598 425.598 0 0 0-171.74 35.98 425.644 425.644 0 0 0-142.62 102.22l118.14 204.63a213.397 213.397 0 0 1 78.67-94.21m117.56 604.72H512zm-97.25-236.73a213.284 213.284 0 0 1-89.54-86.81L142.48 298.6c-36.35 62.81-57.13 135.68-57.13 213.42 0 203.81 142.93 374.22 333.95 416.55h.04l118.19-204.71a213.315 213.315 0 0 1-122.77-21.91z"></path></svg>'];
+                            }
+                            if (get_user_row($CURUSER['id'])['class'] >= 14) {
+                                $nameIconArrayManager['站点设定']=["settings.php",'<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" viewBox="0 0 1024 1024" data-v-ea893728=""><path fill="currentColor" d="M938.67 512.01c0-44.59-6.82-87.6-19.54-128H682.67a212.372 212.372 0 0 1 42.67 128c.06 38.71-10.45 76.7-30.42 109.87l-182.91 316.8c235.65-.01 426.66-191.02 426.66-426.67z"></path><path fill="currentColor" d="M576.79 401.63a127.92 127.92 0 0 0-63.56-17.6c-22.36-.22-44.39 5.43-63.89 16.38s-35.79 26.82-47.25 46.02a128.005 128.005 0 0 0-2.16 127.44l1.24 2.13a127.906 127.906 0 0 0 46.36 46.61 127.907 127.907 0 0 0 63.38 17.44c22.29.2 44.24-5.43 63.68-16.33a127.94 127.94 0 0 0 47.16-45.79v-.01l1.11-1.92a127.984 127.984 0 0 0 .29-127.46 127.957 127.957 0 0 0-46.36-46.91"></path><path fill="currentColor" d="M394.45 333.96A213.336 213.336 0 0 1 512 298.67h369.58A426.503 426.503 0 0 0 512 85.34a425.598 425.598 0 0 0-171.74 35.98 425.644 425.644 0 0 0-142.62 102.22l118.14 204.63a213.397 213.397 0 0 1 78.67-94.21m117.56 604.72H512zm-97.25-236.73a213.284 213.284 0 0 1-89.54-86.81L142.48 298.6c-36.35 62.81-57.13 135.68-57.13 213.42 0 203.81 142.93 374.22 333.95 416.55h.04l118.19-204.71a213.315 213.315 0 0 1-122.77-21.91z"></path></svg>'];
+                                $nameIconArrayManager['管理系统']=["nexusphp",'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" data-v-ea893728=""><path fill="currentColor" d="M448 832v-64h128v64h192v64H256v-64zM128 704V128h768v576z"></path></svg>'];
+                                $nameIconArrayManager['管理成员']=["staff.php",'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" data-v-ea893728=""><path fill="currentColor" d="M628.736 528.896A416 416 0 0 1 928 928H96a415.872 415.872 0 0 1 299.264-399.104L512 704zM720 304a208 208 0 1 1-416 0 208 208 0 0 1 416 0"></path></svg>'];
+                                $nameIconArrayManager['日志']=["log.php",'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" data-v-ea893728=""><path fill="currentColor" d="M128 320v576h576V320zm-32-64h640a32 32 0 0 1 32 32v640a32 32 0 0 1-32 32H96a32 32 0 0 1-32-32V288a32 32 0 0 1 32-32M960 96v704a32 32 0 0 1-32 32h-96v-64h64V128H384v64h-64V96a32 32 0 0 1 32-32h576a32 32 0 0 1 32 32M256 672h320v64H256zm0-192h320v64H256z"></path></svg>'];
+                                $nameIconArrayManager['作弊者']=["cheaterbox.php",'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" data-v-ea893728=""><path fill="currentColor" d="M628.736 528.896A416 416 0 0 1 928 928H96a415.872 415.872 0 0 1 299.264-399.104L512 704zM720 304a208 208 0 1 1-416 0 208 208 0 0 1 416 0"></path></svg>'];
+                                $nameIconArrayManager['举报信箱']=["reports.php",'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" data-v-ea893728=""><path fill="currentColor" d="M128 224v512a64 64 0 0 0 64 64h640a64 64 0 0 0 64-64V224zm0-64h768a64 64 0 0 1 64 64v512a128 128 0 0 1-128 128H192A128 128 0 0 1 64 736V224a64 64 0 0 1 64-64"></path><path fill="currentColor" d="M904 224 656.512 506.88a192 192 0 0 1-289.024 0L120 224zm-698.944 0 210.56 240.704a128 128 0 0 0 192.704 0L818.944 224H205.056"></path></svg>'];
+                                $nameIconArrayManager['管理信箱']=["staffbox.php",'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" data-v-ea893728=""><path fill="currentColor" d="M128 224v512a64 64 0 0 0 64 64h640a64 64 0 0 0 64-64V224zm0-64h768a64 64 0 0 1 64 64v512a128 128 0 0 1-128 128H192A128 128 0 0 1 64 736V224a64 64 0 0 1 64-64"></path><path fill="currentColor" d="M904 224 656.512 506.88a192 192 0 0 1-289.024 0L120 224zm-698.944 0 210.56 240.704a128 128 0 0 0 192.704 0L818.944 224H205.056"></path></svg>'];
+
+                            }
+                            foreach ($nameIconArrayManager as $menuName => $infoArr) {
+                                print("<a class='info-container-icon-a' href='".$infoArr[0]."'>");
+                                print("<div style='height: 70px; width: 43px; padding: 3px 16px 2px 16px;'>");
+                                print("<div style='color: #ff7f7f;width: 33px; padding-left: 5px; padding-right: 5px; padding-top: 10px;'>" .$infoArr[1]."</div>");
+                                print("<div style='text-align: center;color: black;font-size: 10px; font-weight: bold; margin: 10px auto'>".$menuName ."</div>");
+                                print("</div></a>");
+                            }
+                            ?>
+                        </div>
+                        <div style="height: 10px;">&nbsp;</div>
+                        <!--quit-->
+                        <div style="height: 30px; padding:12px; text-align: center">
+                            <a href="logout.php" class="info-container-quit">退出登录</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!--头像####################################-->
+            <!--头像####################################-->
+
 <table id="info_block" cellpadding="4" cellspacing="0" border="0" width="100%"><tr>
-	<td><table width="100%" cellspacing="0" cellpadding="0" border="0"><tr>
+        <td><table width="100%" cellspacing="0" cellpadding="0" border="0"><tr>
 		<td class="bottom" align="left">
             <span class="medium">
                 <?php echo $lang_functions['text_welcome_back'] ?>, <?php echo get_username($CURUSER['id'])?>
-                <a href="logout.php"><?php echo $lang_functions['text_logout'] ?></a>
-                <a href="usercp.php"><?php echo $lang_functions['text_user_cp'] ?></a>
-                <?php if (get_user_class() >= UC_MODERATOR) { ?> <a href="staffpanel.php"><?php echo $lang_functions['text_staff_panel'] ?></a> <?php }?>
-                <?php if (get_user_class() >= UC_SYSOP) { ?> <a href="settings.php"><?php echo $lang_functions['text_site_settings'] ?></a> <?php } ?>
-                <a href="torrents.php?inclbookmarked=1&amp;allsec=1&amp;incldead=0"><?php echo $lang_functions['text_bookmarks'] ?></a>
-                <font class = 'color_bonus'><?php echo $lang_functions['text_bonus'] ?></font><a href="mybonus.php"><?php echo $lang_functions['text_use'] ?></a> : <?php echo number_format($CURUSER['seedbonus'], 1)?>
+                [<a href="logout.php"><?php echo $lang_functions['text_logout'] ?></a>]
+                [<a href="usercp.php"><?php echo $lang_functions['text_user_cp'] ?></a>]
+                <?php if (get_user_class() >= UC_MODERATOR) { ?> [<a href="staffpanel.php"><?php echo $lang_functions['text_staff_panel'] ?></a>] <?php }?>
+                <?php if (get_user_class() >= UC_SYSOP) { ?> [<a href="settings.php"><?php echo $lang_functions['text_site_settings'] ?></a>]<?php } ?>
+                [<a href="torrents.php?inclbookmarked=1&amp;allsec=1&amp;incldead=0"><?php echo $lang_functions['text_bookmarks'] ?></a>]
+                <!--新增入口$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$-->
+                <!--新增入口$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$-->
+                <a href="customgame.php"><b class="rainbow">小象快乐岛</b></a>
+                <!--新增入口$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$-->
+                <!--新增入口$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$-->
+                <font class = 'color_bonus'><?php echo $lang_functions['text_bonus'] ?></font>[<a href="mybonus.php"><?php echo $lang_functions['text_use'] ?></a>]: <?php echo number_format($CURUSER['seedbonus'], 1)?>
                 <?php if($attendance){ printf(' <a href="attendance.php" class="">'.$lang_functions['text_attended'].'</a>', $attendance->points, $CURUSER['attendance_card']); }else{ printf(' <a href="attendance.php" class="faqlink">%s</a>', $lang_functions['text_attendance']);}?>
-                <a href="medal.php"><?php echo nexus_trans('medal.label')?></a>
-                <font class = 'color_invite'><?php echo $lang_functions['text_invite'] ?></font> <a href="invite.php?id=<?php echo $CURUSER['id']?>"><?php echo $lang_functions['text_send'] ?></a>: <?php echo sprintf('%s(%s)', $CURUSER['invites'], \App\Models\Invite::query()->where('inviter', $CURUSER['id'])->where('invitee', '')->where('expired_at', '>', now())->count())?>
-                <?php if(get_user_class() >= \App\Models\User::getAccessAdminClassMin()) printf(' <a href="%s" target="_blank">%s</a> ', nexus_env('FILAMENT_PATH', 'nexusphp'), $lang_functions['text_management_system'])?>
+                <a href="medal.php">[<?php echo nexus_trans('medal.label')?>]</a>
+                <font class = 'color_invite'><?php echo $lang_functions['text_invite'] ?></font>[<a href="invite.php?id=<?php echo $CURUSER['id']?>"><?php echo $lang_functions['text_send'] ?></a>]: <?php echo sprintf('%s(%s)', $CURUSER['invites'], \App\Models\Invite::query()->where('inviter', $CURUSER['id'])->where('invitee', '')->where('expired_at', '>', now())->count())?>
+                <?php if(get_user_class() >= \App\Models\User::getAccessAdminClassMin()) printf('[<a href="%s" target="_blank">%s</a>]', nexus_env('FILAMENT_PATH', 'nexusphp'), $lang_functions['text_management_system'])?>
                 <br />
 	            <font class="color_ratio"><?php echo $lang_functions['text_ratio'] ?></font> <?php echo $ratio?>
                 <font class='color_uploaded'><?php echo $lang_functions['text_uploaded'] ?></font> <?php echo mksize($CURUSER['uploaded'])?>
                 <font class='color_downloaded'> <?php echo $lang_functions['text_downloaded'] ?></font> <?php echo mksize($CURUSER['downloaded'])?>
+<!--                当前活动-->
                 <font class='color_active'><?php echo $lang_functions['text_active_torrents'] ?></font> <img class="arrowup" alt="Torrents seeding" title="<?php echo $lang_functions['title_torrents_seeding'] ?>" src="pic/trans.gif" /><?php echo $activeseed?>  <img class="arrowdown" alt="Torrents leeching" title="<?php echo $lang_functions['title_torrents_leeching'] ?>" src="pic/trans.gif" /><?php echo $activeleech?>&nbsp;&nbsp;
+<!--                可连接性-->
                 <font class='color_connectable'><?php echo $lang_functions['text_connectable'] ?></font><?php echo $connectable?> <?php echo maxslots();?>
-                <?php if(\App\Models\HitAndRun::getIsEnabled()) { ?><font class='color_bonus'>H&R: </font> <?php echo sprintf('<a href="myhr.php">%s</a>', (new \App\Repositories\HitAndRunRepository())->getStatusStats($CURUSER['id']))?><?php }?>
-                <?php if(\App\Models\Claim::getConfigIsEnabled()) { ?><font class='color_bonus'><?php echo $lang_functions['menu_claim']?></font> <?php echo sprintf('<a href="claim.php?uid=%s">%s</a>', $CURUSER['id'], (new \App\Repositories\ClaimRepository())->getStats($CURUSER['id']))?><?php }?>
+
+                <?php if(\App\Models\HitAndRun::getIsEnabled()) { ?><font class='color_bonus'>H&R: </font> <?php echo sprintf('[<a href="myhr.php">%s</a>]', (new \App\Repositories\HitAndRunRepository())->getStatusStats($CURUSER['id']))?><?php }?>
+                <?php if(\App\Models\Claim::getConfigIsEnabled()) { ?><font class='color_bonus'><?php echo $lang_functions['menu_claim']?></font> <?php echo sprintf('[<a href="claim.php?uid=%s">%s</a>]', $CURUSER['id'], (new \App\Repositories\ClaimRepository())->getStats($CURUSER['id']))?><?php }?>
             </span>
         </td>
                 <?php if(SearchBox::isSpecialEnabled() && get_setting('main.enable_global_search') == 'yes'){?>
@@ -2961,7 +3173,19 @@ function stdfoot() {
 	$year = substr($datefounded, 0, 4);
 	$yearfounded = ($year ? $year : 2007);
 	print(" (c) "." <a href=\"" . get_protocol_prefix() . $BASEURL."\" target=\"_self\">".$SITENAME."</a> ".($icplicense_main ? " ".$icplicense_main." " : "").(date("Y") != $yearfounded ? $yearfounded."-" : "").date("Y")." ".VERSION."<br /><br />");
-	printf ("[page created in <b> %s </b> sec", sprintf("%.3f", $totaltime));
+	// #########################
+	// ########页尾友情链接#######
+	// #########################
+    $linkList = \Nexus\Database\NexusDB::table("links")->get();
+    print ("<div style='font-size: 15px;'> 友情链接 - ");
+    foreach ($linkList as $link) {
+        print ("<a href='".$link->url."'>".$link->name."</a>&nbsp;&nbsp;");
+    }
+    print("</div><br>");
+	// #########################
+	// #########################
+	// #########################
+    printf ("[page created in <b> %s </b> sec", sprintf("%.3f", $totaltime));
     print (" with <b>".count($query_name)."</b> db queries, <b>".$Cache->getCacheReadTimes()."</b> reads and <b>".$Cache->getCacheWriteTimes()."</b> writes of Redis and <b>".mksize(memory_get_usage())."</b> ram]");
 	print ("</div>\n");
 	if ($enablesqldebug_tweak == 'yes' && get_user_class() >= $sqldebug_tweak) {
@@ -3288,7 +3512,7 @@ function commenttable($rows, $type, $parent_id, $review = false)
 		print("<div style=\"margin-top: 8pt; margin-bottom: 8pt;\"><table id=\"cid".$row["id"]."\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\" width=\"100%\"><tr><td class=\"embedded\" width=\"99%\">#" . $row["id"] . "&nbsp;&nbsp;<font color=\"gray\">".$lang_functions['text_by']."</font>");
 		print(get_username($row["user"],false,true,true,false,false,true));
 		print("&nbsp;&nbsp;<font color=\"gray\">".$lang_functions['text_at']."</font>".gettime($row["added"]).
-		($row["editedby"] && user_can('commanage') ? " - <a href=\"comment.php?action=vieworiginal&amp;cid=".$row['id']."&amp;type=".$type."\">".$lang_functions['text_view_original']."</a>" : "") . "</td><td class=\"embedded nowrap\" width=\"1%\"><a href=\"#top\"><img class=\"top\" src=\"pic/trans.gif\" alt=\"Top\" title=\"Top\" /></a>&nbsp;&nbsp;</td></tr></table></div>");
+		($row["editedby"] && user_can('commanage') ? " - [<a href=\"comment.php?action=vieworiginal&amp;cid=".$row['id']."&amp;type=".$type."\">".$lang_functions['text_view_original']."</a>]" : "") . "</td><td class=\"embedded nowrap\" width=\"1%\"><a href=\"#top\"><img class=\"top\" src=\"pic/trans.gif\" alt=\"Top\" title=\"Top\" /></a>&nbsp;&nbsp;</td></tr></table></div>");
 		$avatar = ($CURUSER["avatars"] == "yes" ? htmlspecialchars(trim($userRow["avatar"])) : "");
 		if (!$avatar)
 			$avatar = "pic/default_avatar.png";
@@ -3303,7 +3527,7 @@ function commenttable($rows, $type, $parent_id, $review = false)
 		$secs = 900;
 		$dt = sqlesc(date("Y-m-d H:i:s",(TIMENOW - $secs))); // calculate date.
 		print("<tr>\n");
-		print("<td class=\"rowfollow\" width=\"200\" valign=\"top\" style=\"padding: 0px;\">".return_avatar_image($avatar)."</td>\n");
+		print("<td class=\"rowfollow\" width=\"150\" valign=\"top\" style=\"padding: 0px;\">".return_avatar_image($avatar)."</td>\n");
 		print("<td class=\"rowfollow\" valign=\"top\"><br />".$text.$text_editby."</td>\n");
 		print("</tr>\n");
 		$actionbar = "<a href=\"comment.php?action=add&amp;sub=quote&amp;cid=".$row['id']."&amp;pid=".$parent_id."&amp;type=".$type."\"><img class=\"f_quote\" src=\"pic/trans.gif\" alt=\"Quote\" title=\"".$lang_functions['title_reply_with_quote']."\" /></a>".
@@ -3667,7 +3891,7 @@ foreach ($rows as $row)
         if (empty($coverSrc) && !empty($row['cover'])) {
             $coverSrc = $row['cover'];
         }
-        $tdCover = sprintf('<td class="embedded" style="text-align: center;width: 46px;height: 46px"><img src="pic/misc/spinner.svg" data-src="%s" class="nexus-lazy-load" style="max-height: 46px;max-width: 46px" referrerPolicy="no-referrer" /></td>', $coverSrc);
+        $tdCover = sprintf('<td class="embedded" style="text-align: center;width: 46px;height: 46px"><img src="pic/misc/spinner.svg" data-src="%s" class="nexus-lazy-load" style="max-height: 46px;max-width: 46px" /></td>', $coverSrc);
     }
 
 	print("<td class=\"rowfollow\" width=\"100%\" align=\"left\" style='padding: 0px'><table class=\"torrentname\" width=\"100%\"><tr" . $sphighlight . ">$tdCover<td class=\"embedded\" style='padding-left: 5px'>".$stickyicon."<a $short_torrent_name_alt $mouseovertorrent href=\"details.php?id=".$id."&amp;hit=1\"><b>".htmlspecialchars($dispname)."</b></a>");
@@ -3850,7 +4074,45 @@ if($enabletooltip_tweak == 'yes' && (!isset($CURUSER) || $CURUSER['showlastcom']
 create_tooltip_container($lastcom_tooltip, 400);
 create_tooltip_container($torrent_tooltip, 500);
 }
+// 获取用户等级
+function custom_get_user_lv_class_name($id)
+{
+    $htmlUserName = get_username($id,false,true,false,false,false,false,"",false);
+    if (strpos($htmlUserName, "_Name" ) !== false) {
+        preg_match_all("/class='([^']+)'/", $htmlUserName, $matches);
+        return $matches[1][0];
+    } else {
+        return "unknown-level";
+    }
+}
 
+function custom_get_user_lv($id) {
+    $ucIndex = get_user_row($id)['class'];
+    $nameArray = [
+        "PEASANT",
+        "USER",
+        "POWER_USER",
+        "ELITE_USER",
+        "CRAZY_USER",
+        "INSANE_USER",
+        "VETERAN_USER",
+        "EXTREME_USER",
+        "ULTIMATE_USER",
+        "NEXUS_MASTER",
+        "VIP",
+        "RETIREE",
+        "UPLOADER",
+        "MODERATOR",
+        "ADMINISTRATOR",
+        "SYSOP",
+        "STAFFLEADER",
+    ];
+    return $nameArray[$ucIndex];
+}
+function custom_get_user_name($id) {
+    $htmlUserName = get_username($id,false,true,true,true,false,false,"",false);
+    return $htmlUserName;
+}
 function get_username($id, $big = false, $link = true, $bold = true, $target = false, $bracket = false, $withtitle = false, $link_ext = "", $underline = false)
 {
 	static $usernameArray = array();
@@ -3916,7 +4178,7 @@ function get_username($id, $big = false, $link = true, $bold = true, $target = f
         $medalHtml = '';
 		foreach ($arr['wearing_medals'] ?? [] as $medal) {
             $medalHtml .= sprintf(
-                '<img src="%s" title="%s" class="%s preview" referrerpolicy=\"never\" style="max-height: %s;max-width: %s;margin-left: %s" />',
+                '<img src="%s" title="%s" class="%s preview" style="max-height: %s;max-width: %s;margin-left: %s"/>',
                 $medal['image_large'], $medal['name'], $medalClass, $medalSize, $medalSize, $marginLeft
             );
         }
@@ -3934,7 +4196,7 @@ function get_username($id, $big = false, $link = true, $bold = true, $target = f
 	if (func_num_args() == 1) { //One argument=is default display of username, save it in static array
 		$usernameArray[$id] = $username;
 	}
-	return $username;
+    return $username;
 }
 
 function get_percent_completed_image($p) {
@@ -4685,7 +4947,7 @@ function get_torrent_promotion_append_sub($promotion = 1,$forcemode = "",$showti
 				}
 				$timeout = gettime(date("Y-m-d H:i:s", $futuretime), false, false, true, false, true);
 				if ($timeout)
-				$onmouseover = " <font color='#fffb00'>".$lang_functions['text_will_end_in'].$timeout."</font>"; //free类型字符显示为蓝色，可以更改它
+				$onmouseover = " <font color='#0000FF'>".$lang_functions['text_will_end_in'].$timeout."</font>"; //free类型字符显示为蓝色，可以更改它
 				else $promotion = 1;
 			}
 			break;
@@ -4717,7 +4979,7 @@ function get_torrent_promotion_append_sub($promotion = 1,$forcemode = "",$showti
 				}
 				$timeout = gettime(date("Y-m-d H:i:s", $futuretime), false, false, true, false, true);
 				if ($timeout)
-				$onmouseover = " <font color='#00ffff'>".$lang_functions['text_will_end_in'].$timeout."</font>"; //2XFree 显示为青色，可以更改它
+				$onmouseover = " <font color='#00CC66'>".$lang_functions['text_will_end_in'].$timeout."</font>"; //2XFree 显示为青色，可以更改它
 				else $promotion = 1;
 			}
 			break;
@@ -5255,7 +5517,7 @@ function valid_class_name($filename)
 function return_avatar_image($url)
 {
 	global $CURLANGDIR;
-	return "<img src=\"".$url."\" alt=\"avatar\" width=\"200px\"  onload=\"check_avatar(this, '".$CURLANGDIR."');\" />";
+	return "<img src=\"".$url."\" alt=\"avatar\" width=\"150px\" onload=\"check_avatar(this, '".$CURLANGDIR."');\" />";
 }
 function return_category_image($categoryid, $link="")
 {
@@ -5518,7 +5780,7 @@ function displayHotAndClassic()
                                 continue;
                             }
 
-                            $thumbnail = "<img width=\"{$width}\" height=\"{$height}\" src=\"".$photo_url."\" border=\"0\"  alt=\"poster\" />";
+                            $thumbnail = "<img width=\"{$width}\" height=\"{$height}\" src=\"".$photo_url."\" border=\"0\" alt=\"poster\" />";
 
                             $thumbnail = "<a style=\"margin-right: 2px\" href=\"details.php?id=" . $array['id'] . "&amp;hit=1\" onmouseover=\"domTT_activate(this, event, 'content', '" . htmlspecialchars("<font class=\'big\'><b>" . (addslashes($array['name'] . $pro_torrent)) . "</b></font><br /><font class=\'medium\'>".(addslashes($array['small_descr'])) ."</font>"). "', 'trail', true, 'delay', 0,'lifetime',5000,'styleClass','niceTitle','maxWidth', 600);\">" . $thumbnail . "</a>";
                             $movies_list .= $thumbnail;
@@ -6524,6 +6786,5 @@ function can_view_post($uid, $post)
     do_log("$log, TRUE");
     return true;
 }
-
 
 ?>

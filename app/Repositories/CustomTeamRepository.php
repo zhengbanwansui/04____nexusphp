@@ -165,6 +165,9 @@ class CustomTeamRepository extends BaseRepository
     // 随机对战
     // 随机对战
     public function vs($user, $teamMember, $memberIndexStr) {
+        if ($this->getTodayBattleCount($user) == 3) {
+            throw new NexusException("进入战斗次数达到上限了");
+        }
         if (strlen($memberIndexStr) == 0) {
             throw new NexusException("选中上场的角色为空");
         }
@@ -188,14 +191,14 @@ class CustomTeamRepository extends BaseRepository
                     $record = $this->vsTemplate($user, $we, $enemy, $result);
                     // 奖励
                     if ($record['win'] == 1) {
-                        $prize = 1000;
+                        $prize = 888;
                     } else {
-                        $prize = 100;
+                        $prize = 168;
                     }
                     break;
                 case 1:// 5v5
                     if(count($we) != 5) {
-                        throw new NexusException("选中上场的角色数量应该为5个 你上场了=".count($we)." str=".$memberIndexStr);
+                        throw new NexusException("   选中上场的角色数量应该为5个 你上场了=".count($we)."个   ");
                     }
                     // 获取敌人
                     $enemy = $this->getEnemyArray($user, 5);
@@ -203,9 +206,9 @@ class CustomTeamRepository extends BaseRepository
                     $record = $this->vsTemplate($user, $we, $enemy, $result);
                     // 奖励
                     if ($record['win'] == 1) {
-                        $prize = 1200;
+                        $prize = 1234;
                     } else {
-                        $prize = 120;
+                        $prize = 218;
                     }
                     break;
                 case 2:// NvBoss
@@ -215,6 +218,8 @@ class CustomTeamRepository extends BaseRepository
                     // 获取敌人
                     $enemy = $this->getEnemyArray($user, 1);
                     $enemy[0]->hp = 10000;
+                    $enemy[0]->def = 8;
+                    $enemy[0]->atk = 15;
                     $enemy[0]->username = "站长";
                     // 战斗
                     $record = $this->vsTemplate($user, $we, $enemy, $result);
@@ -224,13 +229,20 @@ class CustomTeamRepository extends BaseRepository
                     break;
             }
             $timeId = time();
-            // 入库战斗记录
+            // 删除今天以前旧的战斗记录
+//            throw new NexusException("[[[uid=".$user->id." date=".date('Y-m-d')."]]]",666);
+            NexusDB::table("custom_team_battle")
+                ->where('user_id', '=', $user->id)
+                ->where('date', '!=', date('Y-m-d 00:00:00'))
+                ->delete();
+            // 入库新的战斗记录
             NexusDB::table("custom_team_battle")->insert([
                 "id"=>$timeId,
                 "user_id"=>$user->id,
                 "info"=>$result,
                 "win"=>$record['win'],
-                "prize"=>$prize
+                "prize"=>$prize,
+                "date"=>date('Y-m-d 00:00:00')
             ]);
             // 增加魔力奖励
             NexusDB::table("users")->where("id", $user->id)->update(
@@ -383,14 +395,14 @@ class CustomTeamRepository extends BaseRepository
                 $keys[] = $randKey; // 抽到普通角色
             }
         }
-        if (!in_array($this->getUpMemberName(), $keys)) {
+        if (!in_array($this->getUpMemberName(), $keys) && $times == 10) {
             $keys = array_replace($keys, array(0 => $this->getUpMemberName()));
         }
         return $keys;
     }
 
     public function getUpMemberName() {
-        $array=$this->getTeamArray();
+        $array=$this->getUpArray();
         // 总天数
         $currentDays = floor(time() / (60 * 60 * 24));
         // 第几条
@@ -502,6 +514,26 @@ class CustomTeamRepository extends BaseRepository
         ];
         return $array;
     }
+    public function getUpArray() {
+        $array = [
+            "莎莉"=>"加入此列表的角色会轮替up",
+            "露露"=>"加入此列表的角色会轮替up",
+            "巨巨"=>"加入此列表的角色会轮替up",
+            "阿三"=>"加入此列表的角色会轮替up",
+            "艾勒芬"=>"加入此列表的角色会轮替up",
+            "啡卡"=>"加入此列表的角色会轮替up",
+            "茉莉"=>"加入此列表的角色会轮替up",
+            "保罗"=>"26加入此列表的角色会轮替up",
+            "庞克斯"=>"27加入此列表的角色会轮替up",
+            "大大"=>"28加入此列表的角色会轮替up",
+            "泡芙"=>"29加入此列表的角色会轮替up",
+            "鲨鲨"=>"30鲨鲨 加入此列表的角色会轮替up",
+            "叶天帝"=>"31加入此列表的角色会轮替up",
+            "麒麟9000s"=>"1加入此列表的角色会轮替up",
+            "阿原"=>"加入此列表的角色会轮替up",
+        ];
+        return $array;
+    }
     public function getTeamPic() {
         $array = [
             "莎莉"=>"https://pic.ziyuan.wang/user/zhengbanwansui/2023/12/_5233f1a636b06.png",
@@ -530,7 +562,7 @@ class CustomTeamRepository extends BaseRepository
             "text"=>$text,
             "type"=>"sb"
         ];
-        NexusDB::table("shoutbox")->insert($shoutDO);
+        NexusDB::table("custom_broadcastbox")->insert($shoutDO);
     }
 
     function updateUserById($id, $updateArray) {
@@ -563,6 +595,17 @@ class CustomTeamRepository extends BaseRepository
 
     function getTeamMember($id) {
         return NexusDB::table("custom_team_member")->where("id",$id)->first();
+    }
+
+    function getTodayBattleRecord() {
+        $today = date('Y-m-d');
+    }
+
+    public function getTodayBattleCount($id) {
+        $bats = NexusDB::table("custom_team_battle")
+            ->where('user_id', '=', $id)
+            ->where('date', '=', date('Y-m-d 00:00:00'))->get();
+        return count($bats);
     }
 //    function getChapter() {
 //        $array = [

@@ -134,6 +134,18 @@ if ($showfunbox_main == "yes" && (!isset($CURUSER) || $CURUSER['showfb'] == "yes
 	}
 }
 // ------------- end: funbox ------------------//
+// ------------- start: broadcastbox ------------------//
+print("<h2>普天同庆 - 喜迎2024</h2>");
+print("<table style='width: 100%; '><tbody><tr></tr><td>");
+print("<div style='height: 200px; width: 100%;overflow-y: auto;padding-top: 15px'>");
+$result = Nexus\Database\NexusDB::table("custom_broadcastbox")->limit(100)->orderBy('id', 'desc')->get();
+foreach ($result as $one) {
+    print("<div style='display:block; font-size:15px;padding-left: 18px;'>".'['.date('Y-m-d H:i', $one->date).'] '.$one->text."</div>");
+}
+print("<div>");
+print("<td></tr></tbody></table>");
+
+// ------------- end: broadcastbox ------------------//
 // ------------- start: shoutbox ------------------//
 if ($showshoutbox_main == "yes") {
 ?>
@@ -166,7 +178,10 @@ JS;
 	print("<iframe id='iframe-shout-box' src='shoutbox.php?type=shoutbox' width='100%' height='180' frameborder='0' name='sbox' marginwidth='0' marginheight='0'></iframe><br /><br />\n");
 	print("<form action='shoutbox.php' method='get' target='sbox' name='shbox'>\n");
     print('<div style="display: flex">');
-	print("<label for='shbox_text'>".$lang_index['text_message']."</label><input type='text' name='shbox_text' id='shbox_text' size='100' style='flex-grow: 1; border: 1px solid gray;' />  <input type='submit' id='hbsubmit' class='btn' name='shout' value=\"".$lang_index['sumbit_shout']."\" />");
+	print("<label for='shbox_text'>".$lang_index['text_message']."</label><input type='text' name='shbox_text' id='shbox_text' size='100' style='flex-grow: 1; border: 1px solid gray;' />  <input type='submit' id='hbsubmit' class='btn' name='shout' value=\""
+
+        ."发言"."\" />");
+
 	if ($CURUSER['hidehb'] != 'yes' && $showhelpbox_main =='yes')
 		print("<input type='submit' class='btn' name='toguest' value=\"".$lang_index['sumbit_to_guest']."\" />");
 	print("<input type='reset' class='btn' value=\"".$lang_index['submit_clear']."\" /> <input type='hidden' name='sent' value='yes' /><input type='hidden' name='type' value='shoutbox' />");
