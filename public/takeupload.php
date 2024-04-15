@@ -274,7 +274,19 @@ else{ //ramdom torrent promotion
 	else
 		$sp_state = 1; //normal
 }
-
+// #########################################
+// #########################################
+// 种子的tag里有官种则x2 free
+$tagIdArr = array_filter($_POST['tags'][$catmod] ?? []);
+if (!empty($tagIdArr)) {
+	foreach($tagIdArr as $tagId) {
+		if ($tagId == 3) {
+			$sp_state = 4;
+		}
+	}
+}
+// #########################################
+// #########################################
 if ($altname_main == 'yes'){
 $cnname_part = unesc(trim($_POST["cnname"]));
 $size_part = str_replace(" ", "", mksize($totallen));

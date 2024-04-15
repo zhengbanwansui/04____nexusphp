@@ -392,6 +392,7 @@ document.getElementById("giftselect").disabled = true;
 document.getElementById("giftcustom").disabled = false;
 }
 }
+
 // settings.php
 function NewRow(anchor,up){
 	var thisRow = anchor.parentNode.parentNode;

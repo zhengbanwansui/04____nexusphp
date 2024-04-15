@@ -732,6 +732,7 @@ if ($action == "viewtopic")
 
 		$signature = ($CURUSER["signatures"] == "yes" ? $arr2["signature"] : "");
 		$avatar = ($CURUSER["avatars"] == "yes" ? htmlspecialchars($arr2["avatar"]) : "");
+		$class = ($arr2["class"]);
 
 		$uclass = get_user_class_image($arr2["class"]);
 		$by = get_username($posterid,false,true,true,false,false,true);
@@ -750,15 +751,52 @@ if ($action == "viewtopic")
 				$Cache->delete_value('user_'.$CURUSER['id'].'_last_read_post_list');
 			}
 		}
-
-		print("<div style=\"margin-top: 8pt; margin-bottom: 8pt;\"><table id=\"pid".$postid."\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\" width=\"100%\"><tr><td class=\"embedded\" width=\"99%\"><a href=\"".htmlspecialchars("forums.php?action=viewtopic&topicid=".$topicid."&page=p".$postid."#pid".$postid)."\">#".$postid."</a>&nbsp;&nbsp;<font color=\"gray\">".$lang_forums['text_by']."</font>".$by."&nbsp;&nbsp;<font color=\"gray\">".$lang_forums['text_at']."</font>".$added);
+		print("<div style=\"margin-top: 8pt; margin-bottom: 8pt;\"><table id=\"pid".$postid."\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\" width=\"100%\"><tr><td style='display: flex;flex-direction: row; align-items: center' class=\"embedded\" width=\"99%\"><a href=\"".htmlspecialchars("forums.php?action=viewtopic&topicid=".$topicid."&page=p".$postid."#pid".$postid)."\">#".$postid."</a>&nbsp;&nbsp;<font color=\"gray\">".$lang_forums['text_by']."</font>".$by."&nbsp;&nbsp;<font color=\"gray\">".$lang_forums['text_at']."</font>".$added);
 		if (is_valid_id($arr['editedby']))
 			print("");
 		print("&nbsp;&nbsp;<font color=\"gray\">|</font>&nbsp;&nbsp;");
-		if ($authorid)
-			print("<a href=\"?action=viewtopic&topicid=".$topicid."\">".$lang_forums['text_view_all_posts']."</a>");
-		else
-			print("<a href=\"".htmlspecialchars("?action=viewtopic&topicid=".$topicid."&authorid=".$posterid)."\">".$lang_forums['text_view_this_author_only']."</a>");
+		if ($authorid) {
+            print("<a href=\"?action=viewtopic&topicid=".$topicid."\">".$lang_forums['text_view_all_posts']."</a>");
+        }
+		else{
+            print("<a href=\"".htmlspecialchars("?action=viewtopic&topicid=".$topicid."&authorid=".$posterid)."\">".$lang_forums['text_view_this_author_only']."</a>");
+        }
+        //#########################
+        //######在线pm举办按钮#######
+        //######在线pm举办按钮#######
+        print("&nbsp;&nbsp;<font color=\"gray\">|</font>&nbsp;&nbsp;");
+        $secs = 900;//td
+        $dt = sqlesc(date("Y-m-d H:i:s",(TIMENOW - $secs))); // calculate date.
+        print(("'".$arr2['last_access']."'">$dt?"<img class=\"f_online\" src=\"pic/trans.gif\" alt=\"Online\" title=\"".$lang_forums['title_online']."\" />":"<img class=\"f_offline\" src=\"pic/trans.gif\" alt=\"Offline\" title=\"".$lang_forums['title_offline']."\" />" )."
+		    <a href=\"sendmessage.php?receiver=".htmlspecialchars(trim($arr2["id"]))."\"><img class=\"f_pm\" src=\"pic/trans.gif\" alt=\"PM\" title=\"".$lang_forums['title_send_message_to'].htmlspecialchars($arr2["username"])."\" /></a>
+            <a href=\"report.php?forumpost=$postid\"><img class=\"f_report\" src=\"pic/trans.gif\" alt=\"Report\" title=\"".$lang_forums['title_report_this_post']."\" /></a>
+            ");
+        print("&nbsp;&nbsp;<font color=\"gray\">|</font>&nbsp;&nbsp;");
+        do_action('post_toolbox', $arr, $allPosts, $CURUSER['id']);
+        {
+            if ($pn+$offset>1 && !can_view_post($userid, $arr)){
+                //enable content protection
+                $bodyContent = format_comment($lang_forums["text_post_protected"]);
+                $canViewProtected = false;
+            }else{
+                //display normal content
+                $bodyContent = format_comment($arr["body"]);
+                $canViewProtected = true;
+            }
+        }
+        print("&nbsp;&nbsp;<font color=\"gray\">|</font>&nbsp;&nbsp;");
+        if ($maypost && $canViewProtected)
+            print("<a href=\"".htmlspecialchars("?action=quotepost&postid=".$postid)."\"><img class=\"f_quote\" src=\"pic/trans.gif\" alt=\"Quote\" title=\"".$lang_forums['title_reply_with_quote']."\" /></a>");
+
+        if (user_can('postmanage') || $is_forummod)
+            print("<a href=\"".htmlspecialchars("?action=deletepost&postid=".$postid)."\"><img class=\"f_delete\" src=\"pic/trans.gif\" alt=\"Delete\" title=\"".$lang_forums['title_delete_post']."\" /></a>");
+
+        if (($CURUSER["id"] == $posterid && !$locked) || user_can('postmanage') || $is_forummod)
+            print("<a href=\"".htmlspecialchars("?action=editpost&postid=".$postid)."\"><img class=\"f_edit\" src=\"pic/trans.gif\" alt=\"Edit\" title=\"".$lang_forums['title_edit_post']."\" /></a>");
+        //######在线pm举办按钮#######
+        //######在线pm举办按钮#######
+        //#########################
+        // 多少楼 + 返回顶部按钮
 		print("</td><td class=\"embedded nowrap\" width=\"1%\"><font class=\"big\">".$lang_forums['text_number']."<b>".($pn+$offset)."</b>".$lang_forums['text_lou']."&nbsp;&nbsp;</font><a href=\"#top\"><img class=\"top\" src=\"pic/trans.gif\" alt=\"Top\" title=\"".$lang_forums['text_back_to_top']."\" /></a>&nbsp;&nbsp;</td></tr>");
 
 		print("</table></div>\n");
@@ -766,17 +804,15 @@ if ($action == "viewtopic")
 		print("<table class=\"main\" width=\"100%\" border=\"1\" cellspacing=\"0\" cellpadding=\"5\">\n");
 
 		$body = "<div id=\"pid".$postid."body\">";
-		//hidden content applied to second or higher floor post (for whose user class below Ad , not poster , not mods ,not reply's author)
-//		if ($protected_enabled && $pn+$offset>1 && get_user_class()<UC_ADMINISTRATOR && $userid != $base_posterid && $posterid!=$userid && !$is_forummod){
-		if ($pn+$offset>1 && !can_view_post($userid, $arr)){
-			//enable content protection
-			$bodyContent = format_comment($lang_forums["text_post_protected"]);
-            $canViewProtected = false;
-		}else{
-			//display normal content
-			$bodyContent = format_comment($arr["body"]);
-            $canViewProtected = true;
-		}
+//		if ($pn+$offset>1 && !can_view_post($userid, $arr)){
+//			//enable content protection
+//			$bodyContent = format_comment($lang_forums["text_post_protected"]);
+//            $canViewProtected = false;
+//		}else{
+//			//display normal content
+//			$bodyContent = format_comment($arr["body"]);
+//            $canViewProtected = true;
+//		}
 		if ($highlight){
             $bodyContent = highlight($highlight,$bodyContent);
 		}
@@ -791,25 +827,35 @@ if ($action == "viewtopic")
 		if ($signature)
 		$body .= "<p style='vertical-align:bottom'><br />____________________<br />" . format_comment($signature,false,false,false,true,500,true,false, 1,200) . "</p>";
 
-		$stats = "<br />"."&nbsp;&nbsp;".$lang_forums['text_posts']."$forumposts<br />"."&nbsp;&nbsp;".$lang_forums['text_ul']."$uploaded <br />"."&nbsp;&nbsp;".$lang_forums['text_dl']."$downloaded<br />"."&nbsp;&nbsp;".$lang_forums['text_ratio']."$ratio";
-		print("<tr><td class=\"rowfollow\" width=\"150\" valign=\"top\" align=\"left\" style='padding: 0px'>" .
-		return_avatar_image($avatar). "<br /><br /><br />&nbsp;&nbsp;<img alt=\"".get_user_class_name($arr2["class"],false,false,true)."\" title=\"".get_user_class_name($arr2["class"],false,false,true)."\" src=\"".$uclass."\" />".$stats."</td><td class=\"rowfollow\" valign=\"top\"><br />".$body."</td></tr>\n");
-		$secs = 900;
-		$dt = sqlesc(date("Y-m-d H:i:s",(TIMENOW - $secs))); // calculate date.
-		print("<tr><td class=\"rowfollow\" align=\"center\" valign=\"middle\">".("'".$arr2['last_access']."'">$dt?"<img class=\"f_online\" src=\"pic/trans.gif\" alt=\"Online\" title=\"".$lang_forums['title_online']."\" />":"<img class=\"f_offline\" src=\"pic/trans.gif\" alt=\"Offline\" title=\"".$lang_forums['title_offline']."\" />" )."<a href=\"sendmessage.php?receiver=".htmlspecialchars(trim($arr2["id"]))."\"><img class=\"f_pm\" src=\"pic/trans.gif\" alt=\"PM\" title=\"".$lang_forums['title_send_message_to'].htmlspecialchars($arr2["username"])."\" /></a><a href=\"report.php?forumpost=$postid\"><img class=\"f_report\" src=\"pic/trans.gif\" alt=\"Report\" title=\"".$lang_forums['title_report_this_post']."\" /></a></td>");
-		print("<td class=\"toolbox\" align=\"right\">");
+//		$stats = "<br />"."&nbsp;&nbsp;".$lang_forums['text_posts']."$forumposts<br />"."&nbsp;&nbsp;".$lang_forums['text_ul']."$uploaded <br />"."&nbsp;&nbsp;".$lang_forums['text_dl']."$downloaded<br />"."&nbsp;&nbsp;".$lang_forums['text_ratio']."$ratio";
+		$stats = "";
+		print("<tr>".
+            "<td class=\"rowfollow\" width=\"150\" valign=\"top\" align=\"left\" style='padding: 0px'>" .
+                //#########
+                //#########头像和等级图片
+                //#########
+                "<div style='position: relative'>".
+                    return_avatar_image($avatar, $class).
+                    "<img style='width:75px;position:absolute;top: 55px;right: 20px;' alt=\"".get_user_class_name($arr2["class"],false,false,true)."\" title=\"".get_user_class_name($arr2["class"],false,false,true)."\" src=\"".$uclass."\" />".
+                "</div>".
+            "</td>".
+            "<td class=\"rowfollow\" valign=\"top\"><br />".$body."</td></tr>\n");
+		print("<tr><td class=\"rowfollow\" align=\"center\" valign=\"middle\"></td>");
 
-		do_action('post_toolbox', $arr, $allPosts, $CURUSER['id']);
+        print("<td class=\"toolbox\" align=\"right\">");
 
-		if ($maypost && $canViewProtected)
-		print("<a href=\"".htmlspecialchars("?action=quotepost&postid=".$postid)."\"><img class=\"f_quote\" src=\"pic/trans.gif\" alt=\"Quote\" title=\"".$lang_forums['title_reply_with_quote']."\" /></a>");
-
-		if (user_can('postmanage') || $is_forummod)
-		print("<a href=\"".htmlspecialchars("?action=deletepost&postid=".$postid)."\"><img class=\"f_delete\" src=\"pic/trans.gif\" alt=\"Delete\" title=\"".$lang_forums['title_delete_post']."\" /></a>");
-
-		if (($CURUSER["id"] == $posterid && !$locked) || user_can('postmanage') || $is_forummod)
-		print("<a href=\"".htmlspecialchars("?action=editpost&postid=".$postid)."\"><img class=\"f_edit\" src=\"pic/trans.gif\" alt=\"Edit\" title=\"".$lang_forums['title_edit_post']."\" /></a>");
-		print("</td></tr></table>");
+//		do_action('post_toolbox', $arr, $allPosts, $CURUSER['id']);
+//
+//		if ($maypost && $canViewProtected)
+//		print("<a href=\"".htmlspecialchars("?action=quotepost&postid=".$postid)."\"><img class=\"f_quote\" src=\"pic/trans.gif\" alt=\"Quote\" title=\"".$lang_forums['title_reply_with_quote']."\" /></a>");
+//
+//		if (user_can('postmanage') || $is_forummod)
+//		print("<a href=\"".htmlspecialchars("?action=deletepost&postid=".$postid)."\"><img class=\"f_delete\" src=\"pic/trans.gif\" alt=\"Delete\" title=\"".$lang_forums['title_delete_post']."\" /></a>");
+//
+//		if (($CURUSER["id"] == $posterid && !$locked) || user_can('postmanage') || $is_forummod)
+//		print("<a href=\"".htmlspecialchars("?action=editpost&postid=".$postid)."\"><img class=\"f_edit\" src=\"pic/trans.gif\" alt=\"Edit\" title=\"".$lang_forums['title_edit_post']."\" /></a>");
+		print("</td>");
+        print("</tr></table>");
 	}
 
 	//------ Mod options

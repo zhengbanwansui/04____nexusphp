@@ -12,10 +12,10 @@ loggedinorreturn();
 parked();
 global $CURUSER;
 // 定义对象
-$loanTurnipDao = new \App\Repositories\BonusRepository();
+$loanTurnipDao = new \App\Repositories\CustomLoanTurnipRepository();
 $teamDao = new \App\Repositories\CustomTeamRepository();
 $turnipDaily = getTodayTurnip();
-$teamMember = getTeamMember();
+$teamMember = $teamDao->listTeamMemberByUserId($CURUSER['id']);
 $teamPic = $teamDao->getTeamPic();
 $vsType = $teamDao->getVsTypeList();
 $todayBattleCount = $teamDao->getTodayBattleCount($CURUSER['id']);
@@ -48,7 +48,7 @@ function getMaxProfit() {
     $days_since_start = floor(($today_date - $start_date) / (60 * 60 * 24));
     $max_loan = 500000 + $days_since_start * 10000;
     if ($days_since_start > 150) {
-        $max_loan = 500000 + 150 * 10000 + ($days_since_start-150) * 5000;
+        $max_loan = 500000 + 150 * 10000 + ($days_since_start-150) * 3000;
     }
     return $max_loan;
 }
@@ -108,13 +108,7 @@ function getTeamPiece() {
         ->first();
     return $record;
 }
-function getTeamMember() {
-    global $CURUSER;
-    $record = NexusDB::table("custom_team_member")
-        ->where('user_id', $CURUSER['id'])
-        ->get();
-    return $record;
-}
+
 function bonusarray($option = 0){
     global $onegbupload_bonus,$fivegbupload_bonus,$tengbupload_bonus,$oneinvite_bonus,$customtitle_bonus,$vipstatus_bonus, $basictax_bonus, $taxpercentage_bonus, $bonusnoadpoint_advertisement, $bonusnoadtime_advertisement;
     global $lang_mybonus;
@@ -167,16 +161,16 @@ function bonusarray($option = 0){
         $memberSelected = "<input class=\"memberSelected\" type='hidden' name='memberSelected' value=\"". $index ."\" disabled/>";
         $memberSelectedPic = "<img class='memberSelectedPic' style='display: none;' src='https://pic.ziyuan.wang/user/zhengbanwansui/2023/12/_6e7d78ee484a7.png'>";
         // 按钮
-        $memberBtn="<input class=\"memberBtn\" type=\"submit\" name=\"submit\" value=\"". "投喂" ."\" disabled='true'/>";
+        $memberBtn="<input class=\"memberBtn\" onclick=\"changeSwitch('.switch_member','feed_one')\" type=\"submit\" name=\"submit\" value=\"". "投喂" ."\" disabled='true'/>";
         // 数量
-        $memberNum="<input class='memberNum' type='number' value='1' max='".($member->lv + 10)."' min='1' name='foodNum' value=\"".$turnipDaily->name ."\" required disabled='true'/>";
+        $memberNum="<input class='memberNum' type='number' value='".floor($member->lv / 5) * 1 + $teamDao->lvUpCostExp."' max='".floor($member->lv / 5) * 1 + $teamDao->lvUpCostExp."' min='1' name='foodNum' value=\"".$turnipDaily->name ."\" required disabled='true'/>";
         // 文本
         $memberText="<div class=\"memberText\">".$member->info;
         $today_start = date('Y-m-d 00:00:00');
         if ($member->last_feed_at == $today_start) {
-            $memberText=$memberText."<br><br>【投喂】吃饱了~";
+            $memberText=$memberText."<br><br>【投喂】吃饱了~明天再来吧~";
         } else {
-            $memberText=$memberText."<br><br>【投喂".$turnipDaily->name."】 (花费按照蔬菜市场价计算,每天限一次)".
+            $memberText=$memberText."<br><br>【投喂".$turnipDaily->name."】 (用象草消费,不消耗蔬菜店的库存哦)".
             "<br>&nbsp;&nbsp;&nbsp;数量&nbsp;&nbsp;&nbsp;".$memberNum." 个 x ".$turnipDaily->price."象草 ".$memberBtn;
         }
 //        $memberText=$memberText."<br><br>【投喂".$turnipDaily->name."】 (花费按照蔬菜市场价计算,每天限一次)".
@@ -202,7 +196,15 @@ function bonusarray($option = 0){
             "</div>";
     }
     $imgStr = "<div class='allMember'>".$imgStr."</div>";
-    $bonus['description'] = "角色碎片数量: ".$teamPiece->info."<br><br>".$imgStr;// text
+    $submitSwitch = "<input class='switch_member' type='text' value='feed_one' name='switch_member'>";
+    $selectAllMember="<button class='btn' type='button' onclick='selectTopMember(3)'>等级TOP3</button>"
+        ."<button class='btn' type='button' onclick='selectTopMember(5)'>等级TOP5</button>"
+        ."<button class='btn' type='button' onclick='selectAllMember()'>选择全体角色</button>";
+    $selectNoMember="<button class='btn' type='button' onclick='selectNoMember()'>取消选择</button>";
+    $bulkFeed="<input id='class_bulk_feed' type=\"submit\" name=\"submit\" value='批量投喂(选中的角色以最高数量投喂)'/>";
+    $bonus['description'] = "(每种碎片超过10个后自动获得对应角色) 角色碎片数量: ".$teamPiece->info
+        ."<br><br><input class='vs_member_input' type='text' name='vs_member_name'>".$submitSwitch.$selectAllMember.$selectNoMember.$bulkFeed
+        ."<br><br>".$imgStr;// text
     $results[] = $bonus;
 
     $upString = "<b class='rainbow'>".$teamDao->getUpMemberName()."抽取概率UP!</b>";
@@ -242,11 +244,21 @@ function bonusarray($option = 0){
     if (getWeekDayNumber() == "7") {
         $bonus['points'] = $turnipDaily->price;
         $bonus['name'] = "<b style='color: #288002;'>象岛农庄 【" . $turnipDaily->name . " - 作物成熟 - <b class='rainbow'>开售中</b>】</b>";
-        $bonus['description'] = $turnipDaily->name."的价格是".$turnipDaily->price."，保质期至下周六晚上，要马上进货吗？";
+        $bonus['description'] = "农作物已成熟，保质期至下周六晚24:00<br>".$turnipDaily->name."的价格是".$turnipDaily->price."，保质期至下周六晚24:00，要马上进货吗？";
     } else {
         $bonus['points'] = 0;
-        $bonus['name'] = "<b style='color: #288002;'>象岛农庄 【科学种植中 - 等待成熟】</b>";
-        $bonus['description'] = "每周日新的流行农作物成熟，小象可以来这里批发进货";
+        // 获取当前时间戳和本周日0点时间戳
+        $now = time();
+        $sunday = strtotime('next sunday 00:00:00');
+        // 判断是否已经到了周日
+        if ($now >= $sunday) {
+            $hours_left = 0;
+        } else {
+            // 计算距离周日0点的小时数
+            $hours_left = ceil(($sunday - $now) / 3600);
+        }
+        $bonus['name'] = "<b style='color: #288002;'>象岛农庄 【科学种植中 - 等待成熟】剩余".$hours_left."小时</b>";
+        $bonus['description'] = "每周日新的流行农作物成熟后，小象蔬菜店可以来这里批发进货，记得在下一波农作物成熟前卖出哦";
     }
     $bonus['maxNum'] = intval($CURUSER['seedbonus'] / $turnipDaily->price);
     $bonus['finishTarget'] = 0;
@@ -262,11 +274,11 @@ function bonusarray($option = 0){
     $bonus['menge'] = 0;
     if (getWeekDayNumber() == "7") {
         $bonus['name'] = "<b style='color: #288002;'>小象新鲜蔬菜店</b> 【休息日】 ".$turnipDaily->name."库存：".$currentNumber." 成本：".$currentPrice;
-        $bonus['description'] = "岛民都在家看硬盘里的影视资源，没人来买东西了";
+        $bonus['description'] = "岛民都在家看硬盘里的影视资源，没人来买东西了，店主可以趁今天去象岛农庄进货哦~";
         $bonus['maxNum'] = 0;
     } else {
         $bonus['name'] = "<b style='color: #288002;'>小象新鲜蔬菜店</b> 【" .$turnipDaily->name."<b class='rainbow'> 市场单价：".$turnipDaily->price."</b> "."库存：".$currentNumber." 成本：".$currentPrice."】";
-        $bonus['description'] = "价格每12小时波动一次 ".$turnipDaily->name."~ ".$turnipDaily->name."~ "."能涨价就太好了~~  开店累计盈利 ".$profit." 盈利目标 ".getMaxProfit()."(净利润, 每日自动增加)";
+        $bonus['description'] = "价格每天0:00和12:00波动一次，保质期至周六晚24:00 ".$turnipDaily->name."~ ".$turnipDaily->name."~ "."能涨价就太好了~~  开店累计盈利 ".$profit." 盈利目标 ".getMaxProfit()."(净利润上限, 每日自动增加)";
         // 售价比进货价高, 考虑两个上限
         if ($turnipDaily->price > $currentPrice) {
             $userCanProfit = bcsub(getMaxProfit(), $profit);
@@ -595,7 +607,7 @@ if (!$action) {
             global $vsType;
             print("<td class=\"rowfollow\" align=\"center\">");
             print("<b>今日剩余战斗次数: ".(3 - $todayBattleCount)."</b><br><br>");
-                print("<input id='vs_member_id' type='hidden' name='vs_member_name'>");
+            print("<input class='vs_member_input' type='text' name='vs_member_name'>");
             $battleName = $teamDao->getVsTypeList()[$teamDao->getTodayVsType()];
             if ($todayBattleCount == 3) {$disableBattle = "disabled";} else {$disableBattle = "";}
             print("<input id='vs_submit' type=\"submit\" name=\"submit\" value='".$battleName."' ".$disableBattle."/></td>");
@@ -743,7 +755,7 @@ if ($action == "exchange") {
     $bonuscomment = $CURUSER['bonuscomment'];
     $seedbonus=$CURUSER['seedbonus']-$points;
 
-    $bonusRep = new \App\Repositories\BonusRepository();
+    $bonusRep = new \App\Repositories\CustomLoanTurnipRepository();
     global $loanTurnipDao;
     global $teamDao;
     global $teamMember;
@@ -760,18 +772,25 @@ if ($action == "exchange") {
         nexus_redirect("" . get_protocol_prefix() . "$BASEURL/customgame.php?do=sale_turnip_success");
     }
     elseif ($art == 'team') {
+        // 进入英灵殿点击提交按钮后逻辑, 英灵殿有多个提交按钮, 根据switch的值调用对应函数
         $lockName = "user:$userid:exchange:bonus";
         $lock = new \Nexus\Database\NexusLock($lockName, $lockSeconds);
         if (!$lock->get()) {
             do_log("[LOCKED], $lockName, $lockText");
             nexus_redirect('customgame.php?do=duplicated');
         }
-        $foodNum = $_POST["foodNum"];
-        $memberName = $_POST['memberName'];
-        $memberId = $_POST['memberId'];
-        $eatResult = $teamDao->eatFoodAddExp($CURUSER['id'], $memberId, $memberName, $foodNum, $turnipDaily->price);
-//        echo "日志". $CURUSER['id']." ". $memberId." ". $memberName." ". $foodNum." ". $turnipDaily->price;
+        $switch = $_POST['switch_member'];
+        if ($switch == 'feed_one') {
+            $foodNum = $_POST["foodNum"];
+            $memberName = $_POST['memberName'];
+            $memberId = $_POST['memberId'];
+            $eatResult = $teamDao->eatFoodAddExp($CURUSER['id'], $memberId, $foodNum, $turnipDaily->price);
+        } else {
+            $memberIndexStr = $_POST['vs_member_name'];
+            $eatResult = $teamDao->bulkEat($CURUSER['id'], $teamMember, $memberIndexStr, $turnipDaily->price);
+        }
         nexus_redirect("" . get_protocol_prefix() . "$BASEURL/customgame.php?do=".$eatResult);
+
     }
     elseif ($art == 'vs') {
         $lockName = "user:$userid:exchange:bonus";
@@ -1033,19 +1052,54 @@ if ($action == "exchange") {
 // JavaScript
 // JavaScript
 echo "<script>";
-// 根据当天的战斗类型确定可以选多少人上场
+// 根据当天的战斗类型确定可以选多少人上场 暂时不启用限制数量, 方便做依赖选中角色操作的其他功能,比如批量升级, 这里直接$max = 9999;
 $TodayVsType = $teamDao->getTodayVsType();
-switch ($TodayVsType) {
-    case 0:$max=1;break;
-    case 1:$max=5;break;
-    case 2:$max=999;break;
-    default:$max=0;break;
-}
+//switch ($TodayVsType) {
+//    case 0:$max=1;break;
+//    case 1:$max=5;break;
+//    case 2:$max=999;break;
+//    default:$max=0;break;
+//}
+$max = 9999;
 // 鼠标点击选中的角色
 echo "
 // 用list数组记录选中的角色
 var list = [];
 
+// inputValueChangeTo的值有如下情况
+// feed_one 投喂单个
+// feed_list 投喂多个
+function changeSwitch(switchClassStr, inputValueChangeTo) {
+    let switchDom = document.querySelector(switchClassStr);
+    switchDom.value = inputValueChangeTo;
+}
+// 一键全选角色
+function selectAllMember() {
+    var hiddenMemberSelectedPics = document.querySelectorAll('.memberSelectedPic[style=\"display: none;\"]');
+    for (let hiddenMemberSelectedPic of hiddenMemberSelectedPics) {
+        selectMember(hiddenMemberSelectedPic.parentNode);
+    }
+}
+// 一键取消全选角色
+function selectNoMember() {
+    let hiddenMemberSelectedPics = document.querySelectorAll('.memberSelectedPic[style=\"display: block;\"]');
+    for (let hiddenMemberSelectedPic of hiddenMemberSelectedPics) {
+        selectMember(hiddenMemberSelectedPic.parentNode);
+    }
+}
+// 选择top-N
+function selectTopMember(top) {
+    let hiddenMemberSelectedPics = document.querySelectorAll('.memberSelectedPic[style=\"display: block;\"]');
+    for (let hiddenMemberSelectedPic of hiddenMemberSelectedPics) {
+        selectMember(hiddenMemberSelectedPic.parentNode);
+    }
+    let all = document.querySelectorAll('.memberSelectedPic[style=\"display: none;\"]');
+    for (let one of all) {
+        selectMember(one.parentNode);
+        top--;
+        if (top == 0) break;
+    }
+}
 // 点击角色触发函数
 function selectMember(element) {
     // 选中的数量
@@ -1061,7 +1115,7 @@ function selectMember(element) {
     // 显示隐藏
     var memberSelected = element.parentNode.querySelector('.memberSelected');
     var memberSelectedPic = element.parentNode.querySelector('.memberSelectedPic');
-    var vsMemberTestInput = document.querySelector('#vs_member_id');
+    var vsMemberTestInputs = document.querySelectorAll('.vs_member_input');
     if (memberSelectedPic.style.display == 'none') {
         // 选中显示
         if (count == max) {return;}
@@ -1069,7 +1123,9 @@ function selectMember(element) {
         memberSelectedPic.style.display = 'block';
         // list新增元素
         list.push(memberSelected.value);
-        vsMemberTestInput.value = list.join(',');
+        vsMemberTestInputs.forEach(function(vsMemberTestInput) {
+            vsMemberTestInput.value = list.join(',');
+        });
     } else {
         // 取消隐藏
         memberSelected.disabled = true;
@@ -1079,22 +1135,25 @@ function selectMember(element) {
         list = list.filter(function(value, index, arr) {
           return value !== remove; // 过滤掉需要删除的元素
         });
-        vsMemberTestInput.value = list.join(',');
+        vsMemberTestInputs.forEach(function(vsMemberTestInput) {
+            vsMemberTestInput.value = list.join(',');
+        });
     }
 }
 // 获取提交按钮元素
-var submitBtn = document.getElementById('vs_submit');
-// 给按钮添加点击事件监听器
-submitBtn.addEventListener('click', function(event) {
-  
-  // 在这里执行你想要触发的函数
+var bulkFeedBtn = document.querySelector('#class_bulk_feed');
+bulkFeedBtn.addEventListener('click', function(event) {
+  changeSwitch('.switch_member','feed_list');
+});
+var vsSubmitBtn = document.getElementById('vs_submit');
+vsSubmitBtn.addEventListener('click', function(event) {
   submitMember(event);
 });
 function submitMember(event) {
     var battleType = ".$TodayVsType.";
     if (battleType == 0) {if(list.length != 1) {event.preventDefault();alert('必须先在英灵殿点击选中1名角色上场');}}
     if (battleType == 1) {if(list.length != 5) {event.preventDefault();alert('必须先在英灵殿点击选中5名角色上场');}}
-    if (battleType == 2) {if(list.length < 1) {event.preventDefault();alert('必须先在英灵殿点击选中至少1名角色上场');}}
+    if (battleType == 2) {if(list.length < 1) {event.preventDefault();alert('必须先在英灵殿点击选中角色上场，BOSS战斗不限制人数');}}
 }
 ";
 echo "</script>";

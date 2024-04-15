@@ -161,7 +161,7 @@ stdhead($lang_upload['head_upload']);
                     tr($lang_upload['row_quality'], $selectNormal, 1, "mode_$browsecatmode");
                     echo $customField->renderOnUploadPage(0, $browsecatmode);
                     echo $hitAndRunRep->renderOnUploadPage('', $browsecatmode);
-                    tr($lang_functions['text_tags'], $tagRep->renderCheckbox($browsecatmode), 1, "mode_$browsecatmode");
+                    custom_id_tr('custom_tag_label_list', $lang_functions['text_tags'], $tagRep->renderCheckbox($browsecatmode), 1, "mode_$browsecatmode");
                 }
                 if ($allowspecial) {
                     $selectNormal = $searchBoxRep->renderTaxonomySelect($specialcatmode);
@@ -256,3 +256,44 @@ jQuery("tr[relation]").hide();
 JS;
 \Nexus\Nexus::js($customFieldJs, 'footer', false);
 stdfoot();
+
+
+//echo '
+//<script>
+//var customTagsList = {
+//    "Sports": ["稀缺","官方","首发","禁转","DIY","特效","国语","中字","Dolby Vison","HDR","HDR 10+","完结","HDR 10"],
+//    "HQ Audio": ["禁转","DIY"],
+//    "Misc": ["官方","首发"]
+//}
+//// 发种区的标签筛选
+//var selectElement = document.getElementById("browsecat");
+//// 添加事件监听器
+//selectElement.addEventListener("change", function() {
+//    var selectedOption = selectElement.options[selectElement.selectedIndex];
+//    var selectedValue = selectedOption.value;
+//    var selectedText = selectedOption.textContent;
+//    console.log("选中的值: " + selectedValue);
+//    console.log("选中的文本: " + selectedText);
+//    if (selectedValue !== "0") {
+//      // 获取 custom_tag_label_list 元素
+//      let customTagLabelList = document.getElementById("custom_tag_label_list");
+//      // 找到所有的 label 元素
+//      let labels = customTagLabelList.children;
+//      // 隐藏所有的 label
+//      for (let i = 0; i < labels.length; i++) {
+//          labels[i].style.display = "none";
+//      }
+//      // 显示需要的label元素
+//      for (let i = 0; i < labels.length; i++) {
+//          let textContent = labels[i].textContent;
+//          console.log(textContent);
+//          console.log(customTagsList[selectedText]);
+//          if (customTagsList[selectedText].includes(textContent)) {
+//              labels[i].style.display = "inline-block";
+//          }
+//      }
+//    }
+//
+//});
+//</script>
+//';

@@ -109,3 +109,11 @@ print(smile_row("shbox","shbox_text"));
 print("</td></tr></table></form></td></tr></table>");
 }
 stdfoot();
+
+echo "
+<script>
+const navBlock = document.getElementById('nav_block');
+navBlock.style.backdropFilter = 'blur(5px)';
+navBlock.style.backgroundColor = 'rgba(244,248,251,0.81)';
+</script>
+";

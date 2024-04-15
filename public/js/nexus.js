@@ -64,23 +64,31 @@ jQuery(document).ready(function () {
     }
     var previewEle = jQuery('#nexus-preview')
     var imgEle, selector = 'img.preview', imgPosition
-    jQuery("body").on("mouseover", selector, function (e) {
-        imgEle = jQuery(this);
-        // previewEle = jQuery('<img style="display: none;position:absolute;">').appendTo(imgEle.parent())
-        imgPosition = getImgPosition(e, imgEle)
-        let position = getPosition(e, imgPosition)
-        let src = imgEle.attr("src")
-        if (src) {
-            previewEle.attr("src", src).css(position).fadeIn("fast");
-        }
-    }).on("mouseout", selector, function (e) {
-        // previewEle.remove()
-        // previewEle = null
-        previewEle.hide()
-    }).on("mousemove", selector, function (e) {
-        let position = getPosition(e, imgPosition)
-        previewEle.css(position)
-    })
+    // ######################################
+    // ######################################
+    // ######################################
+    // 预览bug修复
+    // jQuery("body").on("mouseover", selector, function (e) {
+    //     imgEle = jQuery(this);
+    //     // previewEle = jQuery('<img style="display: none;position:absolute;">').appendTo(imgEle.parent())
+    //     imgPosition = getImgPosition(e, imgEle)
+    //     let position = getPosition(e, imgPosition)
+    //     let src = imgEle.attr("src")
+    //     if (src) {
+    //         previewEle.attr("src", src).css(position).fadeIn("fast");
+    //     }
+    // }).on("mouseout", selector, function (e) {
+    //     // previewEle.remove()
+    //     // previewEle = null
+    //     previewEle.hide()
+    // }).on("mousemove", selector, function (e) {
+    //     let position = getPosition(e, imgPosition)
+    //     previewEle.css(position)
+    // })
+    // ######################################
+    // ######################################
+    // ######################################
+
 
     // lazy load
     if ("IntersectionObserver" in window) {

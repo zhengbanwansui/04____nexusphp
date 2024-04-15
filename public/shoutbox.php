@@ -58,7 +58,7 @@ countdown(time);
 }
 </script>
 </head>
-<body class='inframe' <?php if (isset($_GET["type"]) && $_GET["type"] != "helpbox"){?> onload="<?php echo $startcountdown?>" <?php } else {?> onload="hbquota()" <?php } ?>>
+<body style="overflow: hidden" class='inframe' <?php if (isset($_GET["type"]) && $_GET["type"] != "helpbox"){?> onload="<?php echo $startcountdown?>" <?php } else {?> onload="hbquota()" <?php } ?>>
 <?php
 if(isset($_GET["sent"]) && $_GET["sent"]=="yes"){
 if(!isset($_GET["shbox_text"]) || !$_GET['shbox_text'])
@@ -90,8 +90,8 @@ else
 	$date=sqlesc(time());
 	$text=trim($_GET["shbox_text"]);
 
-    # 发现你了, 保存发言的地方
-    # 发现你了, 保存发言的地方
+    # 发现你了, 保存发言的地方########################
+    # 发现你了, 保存发言的地方########################
     if ($type == 'sb' && (strpos($text, "小象") !== false && strpos($text, "求魔力") !== false)) {
         $extra = Nexus\Database\NexusDB::table("custom_user_extra")->where("id", $userid)->first();
         if ($extra == null) {
@@ -118,11 +118,23 @@ else
                 <br>如果你有任何问题或需要更多的象草，随时告诉我哦！祝福你在未来的旅程中一切顺利，带着象草的力量，你将无所不能！',
             ]);
         }
+        \Nexus\Database\NexusDB::table("custom_shoutbox_right")->insert([
+            "user_id"=>$userid,
+            "text"=>$text,
+            "date"=>new DateTime()
+        ]);
+    } else if ($type == 'sb' && strpos($text, "小象求") !== false) {
+        \Nexus\Database\NexusDB::table("custom_shoutbox_right")->insert([
+            "user_id"=>$userid,
+            "text"=>$text,
+            "date"=>new DateTime()
+        ]);
+    } else {
+        // 正常保存到聊天记录
+        sql_query("INSERT INTO shoutbox (userid, date, text, type) VALUES (" . sqlesc($userid) . ", $date, " . sqlesc($text) . ", ".sqlesc($type).")") or sqlerr(__FILE__, __LINE__);
     }
-    # 发现你了, 保存发言的地方
-    # 发现你了, 保存发言的地方
-
-	sql_query("INSERT INTO shoutbox (userid, date, text, type) VALUES (" . sqlesc($userid) . ", $date, " . sqlesc($text) . ", ".sqlesc($type).")") or sqlerr(__FILE__, __LINE__);
+    # 发现你了, 保存发言的地方########################
+    # 发现你了, 保存发言的地方########################
 	print "<script type=\"text/javascript\">parent.document.forms['shbox'].shbox_text.value='';</script>";
 }
 }
@@ -146,8 +158,12 @@ if (mysql_num_rows($res) == 0)
 print("\n");
 else
 {
-	print("<table border='0' cellspacing='0' cellpadding='2' width='100%' align='left'>\n");
-
+    // iframe-shout-box-outside中包含左侧的聊天栏和右侧的求魔力栏
+	print("<div class='shout-box-all'>");
+    // 左侧栏
+    print("<table class='shout-box-left'>\n");
+    print("<tbody><tr><td><div style='height: 600px; overflow-y: auto;padding: 0px'>");
+    print("<table>");
 	while ($arr = mysql_fetch_assoc($res))
 	{
         $del = '';
@@ -155,10 +171,10 @@ else
 			$del .= "[<a href=\"shoutbox.php?del=".$arr['id']."\">".$lang_shoutbox['text_del']."</a>]";
 		}
 		if ($arr["userid"]) {
-			$username = get_username($arr["userid"],false,true,true,true,false,false,"",true);
+			$username = get_username($arr["userid"],false,true,true,true,false,false,"",false);
             if (isset($arr["type"]) && isset($_GET['type']) && $_GET["type"] != 'helpbox' && $arr["type"] == 'hb')
 				$username .= $lang_shoutbox['text_to_guest'];
-			}
+        }
 		else $username = $lang_shoutbox['text_guest'];
 		if (isset($CURUSER) && $CURUSER['timetype'] != 'timealive')
 			$time = strftime("%m.%d %H:%M",$arr["date"]);
@@ -169,11 +185,58 @@ else
         } else {
             $custom_format_comment = format_comment($arr["text"],true,false,true,true,600,false,false);
         }
+        // 头像
+        $myAvatar = custom_get_user_avatar(get_user_row($arr["userid"])['avatar'], get_user_row($arr["userid"])['class'], true, 51, 51, 6);
+        // 一行聊天
+        print("<div class='shoutrowForChat'>");
+            print(" ".$myAvatar);
+            print("<div class='shoutrow_right'> ".
+                "<div style='display: flex; align-items: center'>".
+                $username.
+                " <div>&nbsp;[".$time."]&nbsp;</div> ".
+                $del .
+                "</div>".
+                " <div class='custom_format_comment'>".
+                    $custom_format_comment.
+                "</div>".
+            "</div>");
+        print("</div>");
 
-        print("<tr><td class=\"shoutrow\"><span class='date'>[".$time."]</span> ".
-$del ." ". $username." " . $custom_format_comment. "</td></tr>\n");
 	}
-	print("</table>");
+    print("</table>");
+    print("</div></td></tr></tbody></table>");
+    // 右侧的table
+    print("<table class='shout-box-right'><tbody><tr><td>");
+    print("<div style='height: 600px; overflow-y: auto;padding: 0px'>");
+    print('<div style="text-align: center; font-size: 14px; font-weight: 700;">每日喊出"小象求象草"获得赠礼！</div><br>');
+    $rightList = \Nexus\Database\NexusDB::table("custom_shoutbox_right")->limit(20)->orderBy('id', 'desc')->get();
+    foreach($rightList as $one) {
+        // 用户名+图标
+        $username = custom_get_user_name($one->user_id,false);
+        // 头像
+//        $myAvatarUrl = get_user_row($one->user_id)['avatar'];
+//        $myAvatar = '<img style="padding: 4px 4px 4px 4px;border-radius: 50px; height: 50px;width: 50px; object-fit: cover;" src="'.$myAvatarUrl.'">';
+        $myAvatar = custom_get_user_avatar(get_user_row($one->user_id)['avatar'], get_user_row($one->user_id)['class'], true, 51, 51, 6);
+        // 时间
+//        $time = strftime("%m.%d %H:%M",$arr["date"]);
+        $time = get_elapsed_time((new DateTime($one->date))->getTimestamp()).$lang_shoutbox['text_ago'];
+        // 准本完毕开始输出
+        print("<div class='shoutrowForChat'>");
+        print($myAvatar);
+        print("<div class='shoutrow_right'> ".
+                "<div style='display: flex; align-items: center'>".
+                    $username.
+                    " <div>&nbsp;[".$time."]&nbsp;</div> ".
+                "</div>".
+                "<div class='custom_format_comment'>".
+                    $one->text.
+                "</div>".
+            "</div>");
+        print("</div>");
+    }
+    print("</div>");
+    print("</td></tr></tbody></table>");
+print("</div>");
 }
 ?>
 </body>

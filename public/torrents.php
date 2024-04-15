@@ -1296,11 +1296,17 @@ if ($count) {
     }
     $rows = apply_filter('torrent_list', $rows, $page, $sectiontype, $_GET['search'] ?? '');
 	print($pagertop);
+    //#######################################
+    //#######################################
+    //#######################################
 	if ($sectiontype == $browsecatmode)
 		torrenttable($rows, "torrents", $sectiontype);
 	elseif ($sectiontype == $specialcatmode)
 		torrenttable($rows, "music", $sectiontype);
 	else torrenttable($rows, "bookmarks", $sectiontype);
+    //#######################################
+    //#######################################
+    //#######################################
 	print($pagerbottom);
 }
 else {

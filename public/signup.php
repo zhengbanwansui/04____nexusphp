@@ -128,3 +128,11 @@ tr($lang_signup['row_school'], "<select name=school>$schools</select>", 1);
 </form>
 <?php
 stdfoot();
+
+echo "
+<script>
+const navBlock = document.getElementById('nav_block');
+navBlock.style.backdropFilter = 'blur(5px)';
+navBlock.style.backgroundColor = 'rgba(244,248,251,0.81)';
+</script>
+";
