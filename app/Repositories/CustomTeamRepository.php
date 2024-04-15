@@ -19,7 +19,7 @@ use Nexus\Database\NexusDB;
 
 class CustomTeamRepository extends BaseRepository
 {
-
+    public $lvUpCostExp = 5;
     // 这里开始写抽卡相关的逻辑, 先把抽卡表的info字段解析逻辑写出来吧
     // 这里开始写抽卡相关的逻辑, 先把抽卡表的info字段解析逻辑写出来吧
     // 这里开始写抽卡相关的逻辑, 先把抽卡表的info字段解析逻辑写出来吧
@@ -62,7 +62,7 @@ class CustomTeamRepository extends BaseRepository
                 }
             }
             // 获取用户已有的team角色
-            $teamDOList = NexusDB::table("custom_team_member")->where('user_id', $user->id)->get();
+            $teamDOList = NexusDB::table("custom_team_member")->where('user_id', $user->id)->orderByDesc('lv')->get();
             // 校验是否组成新角色, 如有, 插入新的到角色表
             foreach ($pieceArray as $key => $value) {
                 if ($pieceArray[$key] >= 10) {
@@ -95,9 +95,7 @@ class CustomTeamRepository extends BaseRepository
                         } else {
                             $b1 = "<b style='color: #ff4242c9'>";
                         }
-                        $this->shoutbox("恭喜".$user->username."获得角色".
-                            $b1.$parts[0]."</b> ".$parts[1].
-                            " HP=".$newMember['hp']." ATK=".$newMember['atk']." DEF=".$newMember['def']);
+                        $this->shoutbox("恭喜".custom_get_user_name($user->id, false)."获得". $b1.$parts[0]."</b>");
                     }
                 }
             }
@@ -114,17 +112,41 @@ class CustomTeamRepository extends BaseRepository
         return $globalGachaResult;
     }
 
-    // 投喂食物, 获得经验, 升级角色
-    // 投喂食物, 获得经验, 升级角色
-    // 投喂食物, 获得经验, 升级角色
-    public function eatFoodAddExp($user, $memberId, $memberName, $foodNum, $oneFoodPrice) {
-        global $globalEatResult;
-        $globalEatResult = "投喂结果未赋值....";
-        NexusDB::transaction(function () use ($user, $memberId, $memberName, $foodNum, $oneFoodPrice) {
-            global $globalEatResult;
+    // 批量投喂
+    public function bulkEat($userId, $teamMember, $memberIndexStr, $oneFoodPrice) {
+        if ($memberIndexStr == null) return "投喂结果：未选择投喂的角色！";
+        $memberIndexs = explode(",", $memberIndexStr);
+        $results = "";
+        foreach ($memberIndexs as $index) {
+            $memberObj = $teamMember[intval($index)];
+            $results .= "@@@";
+            $results .= $this->eatFoodAddExp($userId, $memberObj->id, 0, $oneFoodPrice);
+        }
 
-            // 获取用户信息
-            $user = $this->getUser($user);
+        return $results;
+    }
+
+    // 单个角色, 投喂食物, 获得经验, 升级角色
+    // 单个角色, 投喂食物, 获得经验, 升级角色
+    // 单个角色, 投喂食物, 获得经验, 升级角色
+    public function eatFoodAddExp($userId, $memberId, $foodNum, $oneFoodPrice) {
+        global $globalEatResult;
+        $globalEatResult = "";
+        if ($oneFoodPrice == null || $memberId == null) {
+            $globalEatResult = "投喂失败....错误退出";
+            return $globalEatResult;
+        }
+        // 获取用户信息
+        $user = $this->getUser($userId);
+        // 获取角色信息
+        $member = $this->getTeamMemberById($memberId);
+        NexusDB::transaction(function () use ($user, $memberId, $member, $foodNum, $oneFoodPrice) {
+            global $globalEatResult;
+            $memberName = $member->name;
+            if ($foodNum == 0) {
+                // 未定义投喂数量, 按照最大投喂数量投喂
+                $foodNum = floor($member->lv / 5) * 1 + $this->lvUpCostExp;
+            }
             // 算总价格
             $totalPrice = bcmul($foodNum, $oneFoodPrice);
             // 看钱够不够
@@ -133,26 +155,47 @@ class CustomTeamRepository extends BaseRepository
             }
             // 扣钱
             $this->updateUserById($user->id, ["seedbonus" => bcsub($user->seedbonus, $totalPrice)]);
-            // 获取角色信息
-            $member = $this->getTeamMember($memberId);
+
+
             $today_start = date('Y-m-d 00:00:00');
             if ($member->last_feed_at == $today_start) {
-                $globalEatResult = "投喂结果: 吃不下了";
-                return;
+                $globalEatResult = "投喂结果: ".$memberName."吃不下了";
+                return $globalEatResult;
             }
             // 增加经验
             $currentExp = $member->exp + $foodNum;
             $currentLv = $member->lv;
             $updateMemberDO = ["exp"=>$currentExp];
             $globalEatResult = "投喂结果: ".$memberName."开心地吃掉了你投喂的食物 "."[经验增加".$foodNum."] ";
+            // 升级所需经验
+            $upCost = floor($member->lv / 5) * 1 + $this->lvUpCostExp;
             // 看有没有升级
-            if ($currentExp >= $member->lv + 10) {
+            $luckyNumber = mt_rand(0, 99);
+            if ($currentExp >= $upCost) {
+                if (strpos($member->info, "限定")) {$b1 = "<b class='rainbow'>";} else {$b1 = "<b style='color: #ff4242c9'>";}
                 // 升级了
-                $currentExp = $currentExp - $currentLv - 10;
-                $currentLv = $currentLv + 1;
-                $globalEatResult = $globalEatResult."等级提升到".$currentLv. " 能力提升了!";
+                $currentExp = $currentExp - $upCost;
                 $updateMemberDO = ["hp"=>$member->hp,"atk"=>$member->atk,"def"=>$member->def, "lv"=>$currentLv, "exp"=>$currentExp];
-                $updateMemberDO = $this->generateHpAtkDef($updateMemberDO);
+                // 生成一个 0 到 99 之间的随机数, 10% 升两级, 2% 升十级
+                if ($luckyNumber < 2) {//2% 升十级
+                    for ($i = 0; $i < 10; $i++) {
+                        $updateMemberDO = $this->generateHpAtkDef($updateMemberDO);
+                    }
+                    $globalEatResult = $globalEatResult." 触发了*小象的庆典*, 等级%2B10 ";
+                    $this->shoutbox("恭喜".custom_get_user_name($user->id, false)."的".$b1.$member->name."</b>触发了<b class='rainbow'>小象的庆典</b>，连升10级~");
+                    $updateMemberDO['lv']+=10;
+                } else if ($luckyNumber < 12) {//10% 升两级
+                    $updateMemberDO = $this->generateHpAtkDef($updateMemberDO);
+                    $updateMemberDO = $this->generateHpAtkDef($updateMemberDO);
+                    $globalEatResult = $globalEatResult." 触发了*小象的赐福*, 等级%2B2 ";
+                    $this->shoutbox("恭喜".custom_get_user_name($user->id, false)."的".$b1.$member->name."</b>触发了<b style='color: #ff4242c9'>小象的赐福</b>，连升2级~");
+                    $updateMemberDO['lv']+=2;
+                } else {
+                    $updateMemberDO = $this->generateHpAtkDef($updateMemberDO);
+                    $globalEatResult = $globalEatResult." 等级%2B1 ";
+                    $updateMemberDO['lv']++;
+                }
+                $globalEatResult = $globalEatResult." 等级提升到".$updateMemberDO['lv']. " 角色的某种能力提升了!";
             }
             // 更新角色信息(等级, 属性)
             $updateMemberDO["last_feed_at"] = $today_start;
@@ -411,11 +454,12 @@ class CustomTeamRepository extends BaseRepository
         $upMemberName = array_keys($array)[$index];
         return $upMemberName;
     }
+
     public function gachaOncePrice() {
-        $start_date = strtotime('2023-12-18 00:00:00');
+        $start_date = strtotime('2024-03-28 00:00:00');
         $today_date = strtotime(date('Y-m-d 00:00:00'));
         $days_since_start = floor(($today_date - $start_date) / (60 * 60 * 24));
-        return 10000 + $days_since_start * 10;
+        return 8888 + $days_since_start * 10;
     }
 
     function changeInfoStringToArray($string) {
@@ -511,14 +555,13 @@ class CustomTeamRepository extends BaseRepository
             "鲨鲨"=>"鲨鲨 [结缘限定]♀<br>元气A型, 鱼, 生日6月20日<br>口头禅：Shaaaaaark！",
             "叶天帝"=>"叶天帝 [结缘限定]♂<br>悠闲A型, 人, 生日10月29日<br>口头禅：可叹,落叶飘零~",
             "麒麟9000s"=>"麒麟9000s [结缘限定]♀<br>成熟B型, 麒麟, 生日12月2日<br>口头禅：安逸的氛围…喜欢",
+            "小蝶"=>"小蝶 [结缘限定]♀<br>成熟B型, 蝴蝶, 生日2月24日<br>口头禅：摩西摩西~",
+            "恋恋"=>"恋恋 [结缘限定]♀<br>运动A型, 北极熊, 生日9月15日<br>口头禅：加油",
         ];
         return $array;
     }
     public function getUpArray() {
         $array = [
-            "莎莉"=>"加入此列表的角色会轮替up",
-            "露露"=>"加入此列表的角色会轮替up",
-            "巨巨"=>"加入此列表的角色会轮替up",
             "阿三"=>"加入此列表的角色会轮替up",
             "艾勒芬"=>"加入此列表的角色会轮替up",
             "啡卡"=>"加入此列表的角色会轮替up",
@@ -527,10 +570,15 @@ class CustomTeamRepository extends BaseRepository
             "庞克斯"=>"27加入此列表的角色会轮替up",
             "大大"=>"28加入此列表的角色会轮替up",
             "泡芙"=>"29加入此列表的角色会轮替up",
-            "鲨鲨"=>"30鲨鲨 加入此列表的角色会轮替up",
-            "叶天帝"=>"31加入此列表的角色会轮替up",
-            "麒麟9000s"=>"1加入此列表的角色会轮替up",
+            "莎莉"=>"加入此列表的角色会轮替up",
+            "露露"=>"加入此列表的角色会轮替up",
+            "巨巨"=>"加入此列表的角色会轮替up",
             "阿原"=>"加入此列表的角色会轮替up",
+            // "叶天帝"=>"31加入此列表的角色会轮替up",
+            // "麒麟9000s"=>"1加入此列表的角色会轮替up",
+            // "鲨鲨"=>"30鲨鲨 加入此列表的角色会轮替up",
+            // "小蝶"=>"30鲨鲨 加入此列表的角色会轮替up",
+            // "恋恋"=>"30鲨鲨 加入此列表的角色会轮替up",
         ];
         return $array;
     }
@@ -550,7 +598,9 @@ class CustomTeamRepository extends BaseRepository
             "阿原"=>"https://pic.ziyuan.wang/user/zhengbanwansui/2023/12/_1898d83ebfdbc.png",
             "鲨鲨"=>"https://pic.ziyuan.wang/user/zhengbanwansui/2023/12/_2691dcc2ccf8c.png",
             "叶天帝"=>"https://pic.ziyuan.wang/user/zhengbanwansui/2023/12/_1d1abd4049729.png",
-            "麒麟9000s"=>"https://pic.ziyuan.wang/user/zhengbanwansui/2023/12/9000_4054ea98717fc.png"
+            "麒麟9000s"=>"https://pic.ziyuan.wang/user/zhengbanwansui/2023/12/9000_4054ea98717fc.png",
+            "小蝶"=>"https://img.ptvicomo.net/pic/2024/04/14/661bf25d759df.png",
+            "恋恋"=>"https://img.ptvicomo.net/pic/2024/04/14/661bf5886cc6b.png",
         ];
         return $array;
     }
@@ -593,13 +643,30 @@ class CustomTeamRepository extends BaseRepository
         return $arr;
     }
 
-    function getTeamMember($id) {
-        return NexusDB::table("custom_team_member")->where("id",$id)->first();
+    // 根据用户ID, 从大到小等级获取一个用户的所有角色
+    // 根据用户ID, 从大到小等级获取一个用户的所有角色
+    // 根据用户ID, 从大到小等级获取一个用户的所有角色
+    function listTeamMemberByUserId($userId) {
+        global $CURUSER;
+        $record = NexusDB::table("custom_team_member")
+            ->where('user_id', $userId)
+            ->orderByDesc('lv')
+            ->get();
+        return $record;
     }
 
-    function getTodayBattleRecord() {
-        $today = date('Y-m-d');
+    // 根据id获取一个角色的信息
+    // 根据id获取一个角色的信息
+    // 根据id获取一个角色的信息
+    public function getTeamMemberById($id) {
+        $sqlResult = NexusDB::table("custom_team_member")->where("id",intval($id))->first();
+        return $sqlResult;
     }
+
+    // ??? 可删
+//    function getTodayBattleRecord() {
+//        $today = date('Y-m-d');
+//    }
 
     public function getTodayBattleCount($id) {
         $bats = NexusDB::table("custom_team_battle")

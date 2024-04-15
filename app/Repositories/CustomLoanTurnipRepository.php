@@ -17,7 +17,7 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Nexus\Database\NexusDB;
 
-class BonusRepository extends BaseRepository
+class CustomLoanTurnipRepository extends BaseRepository
 {
     // 贷款
     public function customLoan($user, $requireBonus, $logBusinessType, $logComment = '', array $userUpdates = []) {
