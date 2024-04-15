@@ -1087,7 +1087,10 @@ if ($enableattach_attachment == 'yes'){
 ?>
 <tr>
 <td colspan="2" valign="middle">
-<iframe src="<?php echo getSchemeAndHttpHost()?>/attachment.php" width="100%" height="24" frameborder="0" scrolling="no" marginheight="0" marginwidth="0"></iframe>
+<!--    ######################################-->
+<!--    #################发种页面这个高度24改为30#####################-->
+<!--    ######################################-->
+<iframe src="<?php echo getSchemeAndHttpHost()?>/attachment.php" width="100%" height="30" frameborder="0" scrolling="no" marginheight="0" marginwidth="0"></iframe>
 </td>
 </tr>
 <?php
@@ -2206,6 +2209,25 @@ function mkglobal($vars) {
 	return 1;
 }
 
+function custom_id_tr($customId, $x,$y,$noesc=0,$relation='', $return = false) {
+    if ($noesc)
+        $a = $y;
+    else {
+        $a = htmlspecialchars($y);
+        $a = str_replace("\n", "<br />\n", $a);
+    }
+//	$result = ("<tr".( $relation ? " relation = \"$relation\"" : "")."><td class=\"rowhead nowrap\" valign=\"top\" align=\"right\">$x</td><td class=\"rowfollow\" valign=\"top\" align=\"left\">".$a."</td></tr>\n");
+    $result = sprintf(
+        '<tr%s><td class="rowhead nowrap" valign="top" align="right">%s</td><td id="'.$customId.'" class="rowfollow" valign="top" align="left">%s</td></tr>',
+        $relation ? sprintf(' relation="%s" class="%s"', $relation, $relation) : '',
+        $x, $a
+    );
+    if ($return) {
+        return $result;
+    }
+    print $result;
+}
+
 function tr($x,$y,$noesc=0,$relation='', $return = false) {
 	if ($noesc)
 	$a = $y;
@@ -2319,6 +2341,8 @@ function menu ($selected = "home") {
         $selected = "contactstaff";
     }elseif (preg_match("/staff/i", $script_name)) {
         $selected = "staff";
+	}elseif (preg_match("/customgame/i", $script_name)) {
+        $selected = "customgame";
 	}else
 	$selected = "";
 	$menu = apply_filter('nexus_menu');
@@ -2329,15 +2353,13 @@ function menu ($selected = "home") {
 	    $lang = get_langfolder_cookie();
         $normalSectionName = get_searchbox_value(get_setting('main.browsecat'), 'section_name');
         $specialSectionName = get_searchbox_value(get_setting('main.specialcat'), 'section_name');
-
-
         print ("<ul id=\"mainmenu\" class=\"menu\">");
         // ##########################################
         // ##########################################
         // ##########################################
         // 菜单种子大按钮
         print ('<span class="line" style="background-color:#E9E9E9;display: block; height: 17px;width:1px;margin: 0 20px;" ></span>');
-        $one = \Nexus\Database\NexusDB::table("custom_lucky_draw_prizes_num_test")->where("id", 2)->first();
+//        $one = \Nexus\Database\NexusDB::table("custom_lucky_draw_prizes_num_test")->where("id", 2)->first();
         print ("<li class='torrents_big_touch' " . ($selected == "torrents" ? " class=\"selected\"" : "") . ">
         <div style='display: flex; flex-direction: row; align-items: center; margin-right: 30px;'>
             <a class='torrents_big_buttom' href=\"torrents.php\">" . '种子'. "</a>
@@ -2348,29 +2370,25 @@ function menu ($selected = "home") {
         print("<div class='torrents_type_container'>");
         // 遍历显示各个分区
         $customCategory1 = [
-            "影视综合"=>["全部影视资源", "torrents.php?cat401=1&cat402=1&cat403=1&cat404=1&cat405=1&cat414=1", "https://img.ptvicomo.net/pic/2023/12/31/659108a9125fd.png"],
+            "影视综合"=>["全部影视资源", "torrents.php?cat401=1&cat402=1&cat403=1&cat404=1&cat405=1", "https://img.ptvicomo.net/pic/2023/12/31/659108a9125fd.png"],
             "电影"=>["震撼人心的视觉盛宴", "torrents.php?cat401=1", "https://img.ptvicomo.net/pic/2023/12/31/659108a9125fd.png"],
             "电视剧"=>["引人入胜的剧情发展", "torrents.php?cat402=1", "https://img.ptvicomo.net/pic/2023/12/31/659108a9125fd.png"],
-            "综艺"=>["欢乐不断的娱乐秀场", "torrents.php?cat403=1", "https://img.ptvicomo.net/pic/2023/12/31/659108a9125fd.png"],
             "动漫"=>["奇幻世界的无限想象", "torrents.php?cat405=1", "https://img.ptvicomo.net/pic/2023/12/31/659108a9125fd.png"],
+            "综艺"=>["欢乐不断的娱乐秀场", "torrents.php?cat403=1", "https://img.ptvicomo.net/pic/2023/12/31/659108a9125fd.png"],
             "纪录片"=>["真实记录的人生故事", "torrents.php?cat404=1", "https://img.ptvicomo.net/pic/2023/12/31/659108a9125fd.png"],
-            "短剧"=>["跌宕起伏的小剧场", "torrents.php?cat414=1", "https://img.ptvicomo.net/pic/2023/12/31/659108a9125fd.png"],
         ];
         $customCategory2 = [
-            "电子书"=>["随时随地的阅读伴侣", "special.php?cat411=1", "https://img.ptvicomo.net/pic/2023/12/31/659108a9c1f03.png"],
-            "有声书"=>["享受耳朵的阅读体验", "torrents.php?cat412=1", "https://img.ptvicomo.net/pic/2023/12/31/659108a9c1f03.png"],
-            "字幕"=>["文字化解语言障碍", "torrents.php?cat412=1", "https://img.ptvicomo.net/pic/2023/12/31/659108a9c1f03.png"],
-            "MV"=>["视听盛宴的音乐表演", "torrents.php?cat403=1", "https://img.ptvicomo.net/pic/2023/12/31/659109338602a.png"],
-            "音乐"=>["心灵鸡汤的音乐治愈", "torrents.php?cat405=1", "https://img.ptvicomo.net/pic/2023/12/31/659109338602a.png"],
-            "教育视频"=>["知识普及的生动呈现", "torrents.php?cat404=1", "https://img.ptvicomo.net/pic/2023/12/31/659108a956743.png"],
-            "教育资料"=>["提升学习效率的知识库", "torrents.php?cat414=1", "https://img.ptvicomo.net/pic/2023/12/31/659108a956743.png"],
+            "音乐综合"=>["全部音乐资源", "torrents.php?cat406=1&cat409=1", "https://img.ptvicomo.net/pic/2023/12/31/659109338602a.png"],
+            "音乐"=>["心灵鸡汤的音乐治愈", "torrents.php?cat409=1", "https://img.ptvicomo.net/pic/2023/12/31/659109338602a.png"],
+            "MV"=>["视听盛宴的音乐表演", "torrents.php?cat406=1", "https://img.ptvicomo.net/pic/2023/12/31/659109338602a.png"],
+            "字幕"=>["文字化解语言障碍", "subtitles.php", "https://img.ptvicomo.net/pic/2023/12/31/659108a9c1f03.png"],
         ];
         $customCategory3 = [
-            "我的收藏"=>["珍藏心爱之作的宝库", "torrents.php?cat412=1", "https://img.ptvicomo.net/pic/2023/12/31/659107ae76819.png"],
-            "我的认领"=>["承担责任的领养之家", "torrents.php?cat412=1", "https://img.ptvicomo.net/pic/2023/12/31/659107ae76819.png"],
+            "我的收藏"=>["珍藏心爱之作的宝库", "torrents.php?inclbookmarked=1&allsec=1&incldead=0", "https://img.ptvicomo.net/pic/2023/12/31/659107ae76819.png"],
+            "我的认领"=>["承担责任的领养之家", "claim.php?uid=".$CURUSER['id'], "https://img.ptvicomo.net/pic/2023/12/31/659107ae76819.png"],
             "发种区"=>["分享喜悦的乐园", "upload.php", "https://img.ptvicomo.net/pic/2023/12/31/659107ae76819.png"],
-            "求种区"=>["寻觅资源的寄托所", "viewrequests.php", "https://img.ptvicomo.net/pic/2023/12/31/659107ae76819.png"],
             "候选区"=>["等待机会的等候室", "offers.php", "https://img.ptvicomo.net/pic/2023/12/31/659107ae76819.png"],
+            "求种区"=>["寻觅资源的寄托所", "viewrequests.php", "https://img.ptvicomo.net/pic/2023/12/31/659107ae76819.png"],
         ];
         $allData = [$customCategory1, $customCategory2, $customCategory3];
         foreach ($allData as $customCategory) {
@@ -2394,33 +2412,48 @@ function menu ($selected = "home") {
         // ##########################################
         // ##########################################
         // ##########################################
+        if (strpos($_SERVER['REQUEST_URI'], 'torrents.php?tag_id=3') !== false) {
+            // 给官种加个标记
+            $selected = "official";
+        }
+        // 首页
         print ("<li" . ($selected == "home" ? " class=\"selected\"" : "") . "><a href=\"index.php\">" . $lang_functions['text_home'] . "</a></li>");
+        // 论坛
         if ($enableextforum != 'yes')
             print ("<li" . ($selected == "forums" ? " class=\"selected\"" : "") . "><a href=\"forums.php\">".$lang_functions['text_forums']."</a></li>");
         else
             print ("<li" . ($selected == "forums" ? " class=\"selected\"" : "") . "><a href=\"" . $extforumurl."\" target=\"_blank\">".$lang_functions['text_forums']."</a></li>");
-        print ("<li" . ($selected == "torrents" ? " class=\"selected\"" : "") . "><a href=\"torrents.php\" rel='sub-menu'>".($normalSectionName[$lang] ?? $lang_functions['text_torrents'])."</a></li>");
-        if ($enablespecial == 'yes' && user_can('view_special_torrent'))
-            print ("<li" . ($selected == "special" ? " class=\"selected\"" : "") . "><a href=\"special.php\">".($specialSectionName[$lang] ?? $lang_functions['text_special'])."</a></li>");
-        if ($enableoffer == 'yes')
-            print ("<li" . ($selected == "offers" ? " class=\"selected\"" : "") . "><a href=\"offers.php\">".$lang_functions['text_offers']."</a></li>");
-        if ($enablerequest == 'yes')
-            print ("<li" . ($selected == "requests" ? " class=\"selected\"" : "") . "><a href=\"viewrequests.php\">".$lang_functions['text_request']."</a></li>");
+        // 官种
+        print ("<li" . ($selected == "official" ? " class=\"selected\"" : "") . "><a href=\"torrents.php?tag_id=3\">"."官&nbsp;&nbsp;种"."</a></li>");
+        // 发布
         print ("<li" . ($selected == "upload" ? " class=\"selected\"" : "") . "><a href=\"upload.php\">".$lang_functions['text_upload']."</a></li>");
-        print ("<li" . ($selected == "subtitles" ? " class=\"selected\"" : "") . "><a href=\"subtitles.php\">".$lang_functions['text_subtitles']."</a></li>");
-        //	print ("<li" . ($selected == "usercp" ? " class=\"selected\"" : "") . "><a href=\"usercp.php\">".$lang_functions['text_user_cp']."</a></li>");
-        if (user_can('topten')) {
-            print ("<li" . ($selected == "topten" ? " class=\"selected\"" : "") . "><a href=\"topten.php\">".$lang_functions['text_top_ten']."</a></li>");
-        }
-        if (user_can('log')) {
-            print ("<li" . ($selected == "log" ? " class=\"selected\"" : "") . "><a href=\"log.php\">".$lang_functions['text_log']."</a></li>");
-        }
-        print ("<li" . ($selected == "rules" ? " class=\"selected\"" : "") . "><a href=\"rules.php\">".$lang_functions['text_rules']."</a></li>");
-        print ("<li" . ($selected == "faq" ? " class=\"selected\"" : "") . "><a href=\"faq.php\">".$lang_functions['text_faq']."</a></li>");
-        if (user_can('staffmem')) {
-            print ("<li" . ($selected == "staff" ? " class=\"selected\"" : "") . "><a href=\"staff.php\">".$lang_functions['text_staff']."</a></li>");
-        }
-        print ("<li" . ($selected == "contactstaff" ? " class=\"selected\"" : "") . "><a href=\"contactstaff.php\">".$lang_functions['text_contactstaff']."</a></li>");
+        // 候选
+//        if ($enableoffer == 'yes')
+        print ("<li" . ($selected == "offers" ? " class=\"selected\"" : "") . "><a href=\"offers.php\">".$lang_functions['text_offers']."</a></li>");
+//        求种
+//        if ($enablerequest == 'yes')
+//        print ("<li" . ($selected == "requests" ? " class=\"selected\"" : "") . "><a href=\"viewrequests.php\">".$lang_functions['text_request']."</a></li>");
+        // 大转盘
+        print ("<li" . ($selected == "plugin/lucky-draw" ? " class=\"selected\"" : "") . "><a href=\"plugin/lucky-draw\">"."大&nbsp;赚&nbsp;盘"."</a></li>");
+        // 快乐岛
+        print ("<li" . ($selected == "customgame" ? " class=\"selected\"" : "") . "><a href=\"customgame.php\">"."小&nbsp;象&nbsp;快&nbsp;乐&nbsp;岛"."</a></li>");
+//        print ("<li" . ($selected == "torrents" ? " class=\"selected\"" : "") . "><a href=\"torrents.php\" rel='sub-menu'>".($normalSectionName[$lang] ?? $lang_functions['text_torrents'])."</a></li>");
+//        if ($enablespecial == 'yes' && user_can('view_special_torrent'))
+//            print ("<li" . ($selected == "special" ? " class=\"selected\"" : "") . "><a href=\"special.php\">".($specialSectionName[$lang] ?? $lang_functions['text_special'])."</a></li>");
+//        print ("<li" . ($selected == "subtitles" ? " class=\"selected\"" : "") . "><a href=\"subtitles.php\">".$lang_functions['text_subtitles']."</a></li>");
+//        //	print ("<li" . ($selected == "usercp" ? " class=\"selected\"" : "") . "><a href=\"usercp.php\">".$lang_functions['text_user_cp']."</a></li>");
+//        if (user_can('topten')) {
+//            print ("<li" . ($selected == "topten" ? " class=\"selected\"" : "") . "><a href=\"topten.php\">".$lang_functions['text_top_ten']."</a></li>");
+//        }
+//        if (user_can('log')) {
+//            print ("<li" . ($selected == "log" ? " class=\"selected\"" : "") . "><a href=\"log.php\">".$lang_functions['text_log']."</a></li>");
+//        }
+//        print ("<li" . ($selected == "rules" ? " class=\"selected\"" : "") . "><a href=\"rules.php\">".$lang_functions['text_rules']."</a></li>");
+//        print ("<li" . ($selected == "faq" ? " class=\"selected\"" : "") . "><a href=\"faq.php\">".$lang_functions['text_faq']."</a></li>");
+//        if (user_can('staffmem')) {
+//            print ("<li" . ($selected == "staff" ? " class=\"selected\"" : "") . "><a href=\"staff.php\">".$lang_functions['text_staff']."</a></li>");
+//        }
+//        print ("<li" . ($selected == "contactstaff" ? " class=\"selected\"" : "") . "><a href=\"contactstaff.php\">".$lang_functions['text_contactstaff']."</a></li>");
         print ("</ul>");
     }
 	print ("</div>");
@@ -2588,7 +2621,7 @@ $cssupdatedate=($cssupdatedate ? "?".htmlspecialchars($cssupdatedate) : "");
 <link rel="stylesheet" href="styles/curtain_imageresizer.css<?php echo $cssupdatedate?>" type="text/css" />
 <link rel="stylesheet" href="styles/nexus.css<?php echo $cssupdatedate?>" type="text/css" />
 <!--    slide-->
-<link rel="stylesheet" href="js/swiper-bundle.min.css">
+<link rel="stylesheet" href="styles/swiper-bundle.min.css">
 <script src="js/swiper-bundle.min.js"> </script>
 <!--    slide-->
 <?php
@@ -2630,21 +2663,8 @@ foreach (\Nexus\Nexus::getAppendHeaders() as $value) {
     <div class="swiper">
         <div class="swiper-wrapper">
 <!--            ################################-->
-<!--            元旦-->
-<a class="swiper-slide" data-swiper-autoplay="5000" href="https://ptvicomo.net/torrents.php?incldead=1&spstate=0&inclbookmarked=0&size_begin=&size_end=&seeders_begin=&seeders_end=&leechers_begin=&leechers_end=&times_completed_begin=&times_completed_end=&added_begin=&added_end=&search=%E6%B4%9B%E5%9F%BA&search_area=0&search_mode=0">
-<img style="width: 100%;" src="https://img.ptvicomo.net/pic/2023/12/30/658fa331356cb.png"></a>
-<!--            元旦-->
-<a class="swiper-slide" data-swiper-autoplay="5000" href="https://ptvicomo.net/torrents.php?incldead=1&spstate=0&inclbookmarked=0&size_begin=&size_end=&seeders_begin=&seeders_end=&leechers_begin=&leechers_end=&times_completed_begin=&times_completed_end=&added_begin=&added_end=&search=%E6%B4%9B%E5%9F%BA&search_area=0&search_mode=0">
-<img style="width: 100%;" src="https://img.ptvicomo.net/pic/2024/01/01/659210786140d.jpg"></a>
-<!--            快乐岛-->
-<a class="swiper-slide" data-swiper-autoplay="5000" href="https://ptvicomo.net/torrents.php?incldead=1&spstate=0&inclbookmarked=0&size_begin=&size_end=&seeders_begin=&seeders_end=&leechers_begin=&leechers_end=&times_completed_begin=&times_completed_end=&added_begin=&added_end=&search=%E6%B4%9B%E5%9F%BA&search_area=0&search_mode=0">
-<img style="width: 100%;" src="https://img.ptvicomo.net/pic/2023/12/30/658fce73c3e04.jpg"></a>
-
-
-<!--<a class="swiper-slide" data-swiper-autoplay="5000" href="https://ptvicomo.net/torrents.php?incldead=1&spstate=0&inclbookmarked=0&size_begin=&size_end=&seeders_begin=&seeders_end=&leechers_begin=&leechers_end=&times_completed_begin=&times_completed_end=&added_begin=&added_end=&search=%E6%B4%9B%E5%9F%BA&search_area=0&search_mode=0">-->
-<!--                    <img style="width: 100%;" src="https://pic.ziyuan.wang/user/zhengbanwansui/2023/12/banner_83bb975c1083a.png"></a>-->
-<!--<a class="swiper-slide" data-swiper-autoplay="5000" href="https://ptvicomo.net/torrents.php?incldead=1&spstate=0&inclbookmarked=0&size_begin=&size_end=&seeders_begin=&seeders_end=&leechers_begin=&leechers_end=&times_completed_begin=&times_completed_end=&added_begin=&added_end=&search=%E6%B4%9B%E5%9F%BA&search_area=0&search_mode=0">-->
-<!--                    <img style="width: 100%;" src="https://pic.ziyuan.wang/user/zhengbanwansui/2023/12/banner_50cfa7eb56c3e.jpg"></a>-->
+<a class="swiper-slide" data-swiper-autoplay="5000" href="torrents.php">
+<img style="width: 100%;" src="https://pic.ziyuan.wang/user/zhengbanwansui/2023/12/40with7_e5530240989ec.png"></a>
 <!--            ################################-->
         </div>
         <!-- 如果需要导航按钮 -->
@@ -2652,7 +2672,6 @@ foreach (\Nexus\Nexus::getAppendHeaders() as $value) {
         <div class="swiper-button-next"></div>
         <!-- 如果需要分页器<div class="swiper-pagination"></div>-->
         <!-- 如果需要滚动条<div class="swiper-scrollbar"></div>-->
-        <script type="text/javascript" src="js/slide.js"></script>
     </div>
     <!--banner-->
 	<tr>
@@ -2757,32 +2776,75 @@ else {
             <!--头像####################################-->
             <!--头像####################################-->
             <div class="avatar_touch_box_outside">
-                <div class="avatarPicBackground avatar_touch_box">
-                    <img style="width: 45px;height:45px;" class="avatarPic" src="<?php echo $CURUSER['avatar'] ?>" alt="头像">
+                <div class="menu-base-info">
+                    <div class="menu-base-info-items">
+                        <svg role="img" xmlns="http://www.w3.org/2000/svg" width="16px" height="16px" viewBox="0 0 24 24" aria-labelledby="arrowUpIconTitle" stroke="#4394ff" stroke-width="3" stroke-linecap="square" stroke-linejoin="miter" fill="none" color="#4394ff"> <title id="arrowUpIconTitle">Arrow Up</title> <path d="M18 9l-6-6-6 6"/> <path d="M12 21V4"/> <path stroke-linecap="round" d="M12 3v1"/> </svg>
+                        &nbsp;<a href="userdetails.php?id=<?php echo $CURUSER['id'] ?>"><?php echo mksize($CURUSER['uploaded'])?></a></div>
+                    <div class="menu-base-info-items">
+                        <svg role="img" xmlns="http://www.w3.org/2000/svg" width="16px" height="16px" viewBox="0 0 24 24" aria-labelledby="arrowDownIconTitle" stroke="#ff0000" stroke-width="3" stroke-linecap="square" stroke-linejoin="miter" fill="none" color="#ff0000"> <title id="arrowDownIconTitle">Arrow Down</title> <path d="M6 15l6 6 6-6"/> <path d="M12 3v17"/> <path stroke-linecap="round" d="M12 21v-1"/> </svg>
+                        &nbsp;<a href="userdetails.php?id=<?php echo $CURUSER['id'] ?>"><?php echo mksize($CURUSER['downloaded'])?></a></div>
+                    <div class="menu-base-info-items">
+                        <svg role="img" xmlns="http://www.w3.org/2000/svg" width="16px" height="16px" viewBox="0 0 24 24" aria-labelledby="shareAndroidIconTitle" stroke="#8b0000" stroke-width="3" stroke-linecap="square" stroke-linejoin="miter" fill="none" color="#8b0000"> <title id="shareAndroidIconTitle">Share</title> <path d="M16 8L8 11 16 8zM16 16L8 13 16 16z"/> <circle cx="6" cy="12" r="2"/> <circle cx="18" cy="7" r="2"/> <circle cx="18" cy="17" r="2"/> </svg>
+                        &nbsp;<a href="userdetails.php?id=<?php echo $CURUSER['id'] ?>"><?php echo get_ratio($CURUSER['id'])?></a></div>
+                    <div class="menu-base-info-items">
+                        <svg role="img" xmlns="http://www.w3.org/2000/svg" width="16px" height="16px" viewBox="0 0 24 24" aria-labelledby="dolarIconTitle" stroke="#20A53A" stroke-width="3" stroke-linecap="square" stroke-linejoin="miter" fill="none" color="#20A53A"> <title id="dolarIconTitle">Dolar</title> <path d="M12 4L12 6M12 18L12 20M15.5 8C15.1666667 6.66666667 14 6 12 6 9 6 8.5 7.95652174 8.5 9 8.5 13.140327 15.5 10.9649412 15.5 15 15.5 16.0434783 15 18 12 18 10 18 8.83333333 17.3333333 8.5 16"/> </svg>
+                        &nbsp;<a href="mybonus.php"><?php echo number_format( $CURUSER['seedbonus'], 0) ?></a></div>
+                </div>
+                <div class="avatar_touch_box">
+                    <?php print custom_get_user_avatar($CURUSER['avatar'], $CURUSER['class'], true, 53, 53, 5); ?>
                     <div class="user-info-box">
                         <!--容器从上到下一字排开-->
-                        <div class="info-container-avatar">
-                            <!--头像-->
-                            <div class="avatarPicBackground" style=" float: left;">
-                                <img class="avatarPic" src="<?php echo $CURUSER['avatar'] ?>" alt="头像">
-                            </div>
+                        <div style="padding: 20px 20px 0px 20px;">
                             <!--用户名和id-->
-                            <div style=" padding-left: 7px; float: left; font-size: 13px">
-                                <div class="<?php echo custom_get_user_lv_class_name($CURUSER['id']) ?>" style="padding-top: 7px;font-size: 13px;font-family: 'Microsoft YaHei', sans-serif; font-weight: bold;">
-                                    <?php echo $CURUSER['username'] ?>
-                                    <?php //echo custom_get_user_name($CURUSER['id']) ?>
+                            <div style=" padding-left: 0px; font-size: 15px">
+                                <!--用户名-->
+                                <div style="font-size: 15px;font-family: 'Microsoft YaHei', sans-serif; font-weight: bold;">
+                                    <?php echo custom_get_user_name($CURUSER['id'], false) ?> &nbsp;<?php echo custom_get_user_lv($CURUSER['id']) ?>
                                 </div>
-                                <?php echo custom_get_user_lv($CURUSER['id']) ?>
-                                <div style="color: #7f7f7f; padding-top: 4px;font-size: 10px;font-family: 'Microsoft YaHei', sans-serif;  ">
-                                    UID <?php echo $CURUSER['id'] ?>
-                                    <?php
-                                    $invt = $CURUSER['invites'];
-                                    $invtTemp = \App\Models\Invite::query()->where('inviter', $CURUSER['id'])->where('invitee', '')->where('expired_at', '>', now())->count();
-                                    echo "邀请 ".$invt." 临时邀请 ".$invtTemp;
-                                    echo "&nbsp;&nbsp;&nbsp;↑ " . $activeseed . " ↓ " . $activeleech;
-                                    ?>
+                                <!--其他信息-->
+                                <div style="color: #000000; padding-top: 4px;font-size: 15px;font-family: 'Microsoft YaHei', sans-serif;  ">
+                                    <div style="display: flex; flex-direction: row; align-items: center;">
+                                        <div style="width: 34%;display: flex; flex-direction: row; align-items: center;">
+                                            <!--用户ID的svg-->
+                                            <svg role="img" xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" viewBox="0 0 26 26" aria-labelledby="userIconTitle" stroke="#555555" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" fill="none" color="#2329D6"> <title id="userIconTitle">用户ID</title> <path stroke-linecap="round" d="M5.5,19.5 C7.83333333,18.5 9.33333333,17.6666667 10,17 C11,16 8,16 8,11 C8,7.66666667 9.33333333,6 12,6 C14.6666667,6 16,7.66666667 16,11 C16,16 13,16 14,17 C14.6666667,17.6666667 16.1666667,18.5 18.5,19.5"/> <circle cx="12" cy="12" r="10"/> </svg>
+                                            <?php echo $CURUSER['id'] ?>
+                                        </div>
+                                        <div style="width: 33%;display: flex; flex-direction: row; align-items: center;">
+                                            <!--邀请火箭svg-->
+                                            <svg width="24px" height="24px" viewBox="0 5 25 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-labelledby="rocketIconTitle" stroke="#555555" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" color="#2329D6"> <title id="rocketIconTitle">邀请</title> <path d="M12.7526 9.92418C12.2059 10.2861 11.679 10.7057 11.1924 11.1924C10.4754 11.9093 10.4947 11.9482 9.85359 12.682M12.7526 9.92418C16.178 7.65685 20.3848 7.65685 20.3848 7.65685C20.3848 7.65685 20.3848 11.8636 18.1174 15.289M12.7526 9.92418L18.1174 15.289M18.1174 15.289C17.7555 15.8358 17.3359 16.3626 16.8492 16.8492C16.1323 17.5662 16.0934 17.5469 15.3596 18.188M6.11523 17.429C5.74278 17.9526 5.53552 18.2635 5.53552 18.2635L9.77816 22.5061C9.77816 22.5061 10.0891 22.2988 10.6127 21.9264M6.11523 17.429L2.70709 14.0208L8.36394 11.1924L9.85359 12.682M6.11523 17.429C6.83965 16.4105 8.18898 14.5874 9.85359 12.682M10.6127 21.9264L14.0208 25.3345L16.8492 19.6777L15.3596 18.188M10.6127 21.9264C11.6311 21.202 13.4542 19.8526 15.3596 18.188"/> <path d="M5.00003 23C5.35031 21.5825 5.99994 21.0001 6.5 21.5C7.00003 22 6.41751 22.6497 5.00003 23Z"/> </svg>
+                                            <?php $invt = $CURUSER['invites'];echo $invt; ?>
+                                        </div>
+                                        <div style="width: 33%;display: flex; flex-direction: row; align-items: center;">
+                                            <!--临时邀请飞机svg-->
+                                            <svg width="24px" height="24px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-labelledby="planeIconTitle" stroke="#555555" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" color="#2329D6"> <title id="planeIconTitle">临时邀请</title> <path d="M18.3937 4.3638L14 7L6 5L5 6L10.5 10.5L8 14H5L4 15L6.5 16.5L7.5 17.5L9 20L10 19V16L13.5 13.5L18 19L19 18L17 10L19.6362 5.60634C19.85 5.24999 19.7939 4.79385 19.5 4.5C19.2061 4.20615 18.75 4.14999 18.3937 4.3638Z"/> </svg>
+                                            <?php $invtTemp = \App\Models\Invite::query()->where('inviter', $CURUSER['id'])->where('invitee', '')->where('expired_at', '>', now())->count();echo $invtTemp; ?>
+                                        </div>
+                                    </div>
+                                    <div style="display: flex; flex-direction: row; align-items: center;">
+                                        <div style="width: 34%;display: flex; flex-direction: row; align-items: center;">
+                                            <!--HR svg-->
+                                            <svg role="img" xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" viewBox="0 0 24 24" aria-labelledby="lockIconTitle" stroke="#555555" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" fill="none" color="#000000"> <title id="lockIconTitle">H&R</title> <rect width="14" height="10" x="5" y="11"/> <path d="M12,3 L12,3 C14.7614237,3 17,5.23857625 17,8 L17,11 L7,11 L7,8 C7,5.23857625 9.23857625,3 12,3 Z"/> </svg>
+                                            <?php echo(new \App\Repositories\HitAndRunRepository())->getStatusStats($CURUSER['id']); ?>
+                                        </div>
+                                        <div style="width: 33%;display: flex; flex-direction: row; align-items: center;">
+                                            <!--做种中svg-->
+                                            <svg width="24px" height="24px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-labelledby="sortUpIconTitle" stroke="#555555" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" fill="none" color="#000000"> <title id="sortUpIconTitle">做种中</title> <path d="M11 16H17"/> <path d="M11 20H19"/> <path d="M11 12H15"/> <path d="M4 8L7 5L10 8"/> <path d="M7 20L7 6"/> </svg>
+                                            <?php echo $activeseed; ?>
+                                        </div>
+                                        <div style="width: 33%;display: flex; flex-direction: row; align-items: center;">
+                                            <!--下载中svg-->
+                                            <svg width="24px" height="24px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-labelledby="sortDownIconTitle" stroke="#555555" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" fill="none" color="#000000"> <title id="sortDownIconTitle">下载中</title> <path d="M11 9H17"/> <path d="M11 5H19"/> <path d="M11 13H15"/> <path d="M10 17L7 20L4 17"/> <path d="M7 5V19"/> </svg>
+                                            <?php echo $activeleech; ?>
+                                        </div>
+                                    </div>
                                 </div>
-                                <a style='color: #7f7f7f; padding-top: 4px;font-size: 10px;font-family: 'Microsoft YaHei', sans-serif;' href='userdetails.php?id=<?php echo $CURUSER['id']?>' ">个人信息/佩戴勋章></a>
+                                <div style="padding-top: 5px;">
+                                    <a style='color: #000000; font-size: 14px;' href='userdetails.php?id=<?php echo $CURUSER['id']?>' ">个人信息/佩戴勋章></a>
+                                </div>
+                                <div style="padding-top: 2px;">
+                                    <a style='color: #000000; font-size: 14px;' href='custom_diycolor.php'>自定义主题配色></a>
+                                </div>
+
                             </div>
                         </div>
                         <div class="info-container-data-show">
@@ -2799,7 +2861,7 @@ else {
                                 <div class="item-74751b" style="color: #ff0000">下载</div>
                             </div>
                         </div>
-                        <div style="height: 17px;">&nbsp;</div>
+                        <div style="height: 13px;">&nbsp;</div>
                         <div class="info-container-mybonus-1">
                             <div style="padding: 18px; 12px;height: 41px;">
                                 <div style="float: left;">
@@ -2816,7 +2878,12 @@ else {
                                     <div style="font-weight: bold;color: white; font-size: 10px;float: none">当前蔬菜价格</div>
                                     <div style="font-weight: bold;color: white; font-size: 22px;float: none">
                                         <?php
-                                        $todayTurnip = \Nexus\Database\NexusDB::table("custom_turnip_calendar")->where("date", date('Y-m-d 00:00:00'))->first();
+                                        $ampm = date('a', time()); // 将时间戳格式化为上午/下午（am/pm）
+                                        if ($ampm == 'am') {
+                                            $todayTurnip = \Nexus\Database\NexusDB::table("custom_turnip_calendar")->where("date", date('Y-m-d 00:00:00'))->first();
+                                        } else {
+                                            $todayTurnip = \Nexus\Database\NexusDB::table("custom_turnip_calendar")->where("date", date('Y-m-d 12:00:00'))->first();
+                                        }
                                         echo number_format($todayTurnip->price, 0);
                                         ?>
                                     </div>
@@ -2833,8 +2900,6 @@ else {
                             $nameIconArray = [
                                 '每日签到'=>["attendance.php", '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" data-v-ea893728=""><path fill="currentColor" d="m199.04 672.64 193.984 112 224-387.968-193.92-112-224 388.032zm-23.872 60.16 32.896 148.288 144.896-45.696zM455.04 229.248l193.92 112 56.704-98.112-193.984-112-56.64 98.112zM104.32 708.8l384-665.024 304.768 175.936L409.152 884.8h.064l-248.448 78.336zm384 254.272v-64h448v64h-448z"></path></svg>'],
                                 '收发信息'=>["messages.php",'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" data-v-ea893728=""><path fill="currentColor" d="M128 224v512a64 64 0 0 0 64 64h640a64 64 0 0 0 64-64V224zm0-64h768a64 64 0 0 1 64 64v512a128 128 0 0 1-128 128H192A128 128 0 0 1 64 736V224a64 64 0 0 1 64-64"></path><path fill="currentColor" d="M904 224 656.512 506.88a192 192 0 0 1-289.024 0L120 224zm-698.944 0 210.56 240.704a128 128 0 0 0 192.704 0L818.944 224H205.056"></path></svg>'],
-//                                '我的收藏'=>["torrents.php?inclbookmarked=1&allsec=1&incldead=0",'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" data-v-ea893728=""><path fill="currentColor" d="m512 747.84 228.16 119.936a6.4 6.4 0 0 0 9.28-6.72l-43.52-254.08 184.512-179.904a6.4 6.4 0 0 0-3.52-10.88l-255.104-37.12L517.76 147.904a6.4 6.4 0 0 0-11.52 0L392.192 379.072l-255.104 37.12a6.4 6.4 0 0 0-3.52 10.88L318.08 606.976l-43.584 254.08a6.4 6.4 0 0 0 9.28 6.72zM313.6 924.48a70.4 70.4 0 0 1-102.144-74.24l37.888-220.928L88.96 472.96A70.4 70.4 0 0 1 128 352.896l221.76-32.256 99.2-200.96a70.4 70.4 0 0 1 126.208 0l99.2 200.96 221.824 32.256a70.4 70.4 0 0 1 39.04 120.064L774.72 629.376l37.888 220.928a70.4 70.4 0 0 1-102.144 74.24L512 820.096l-198.4 104.32z"></path></svg>'],
-//                                '我的认领'=>["claim.php?uid=".$CURUSER['id'],'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" data-v-ea893728=""><path fill="currentColor" d="M512 386.88V448h405.568a32 32 0 0 1 30.72 40.768l-76.48 267.968A192 192 0 0 1 687.168 896H336.832a192 192 0 0 1-184.64-139.264L75.648 488.768A32 32 0 0 1 106.368 448H448V117.888a32 32 0 0 1 47.36-28.096l13.888 7.616L512 96v2.88l231.68 126.4a32 32 0 0 1-2.048 57.216zm0-70.272 144.768-65.792L512 171.84zM512 512H148.864l18.24 64H856.96l18.24-64zM185.408 640l28.352 99.2A128 128 0 0 0 336.832 832h350.336a128 128 0 0 0 123.072-92.8l28.352-99.2H185.408"></path></svg>'],
                                 '个人信息'=>["userdetails.php?id=".$CURUSER['id'], '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" data-v-ea893728=""><path fill="currentColor" d="M512 512a192 192 0 1 0 0-384 192 192 0 0 0 0 384m0 64a256 256 0 1 1 0-512 256 256 0 0 1 0 512m320 320v-96a96 96 0 0 0-96-96H288a96 96 0 0 0-96 96v96a32 32 0 1 1-64 0v-96a160 160 0 0 1 160-160h448a160 160 0 0 1 160 160v96a32 32 0 1 1-64 0"></path></svg>'],
                                 '控制面板'=>["usercp.php", '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" data-v-ea893728=""><path fill="currentColor" d="M389.44 768a96.064 96.064 0 0 1 181.12 0H896v64H570.56a96.064 96.064 0 0 1-181.12 0H128v-64zm192-288a96.064 96.064 0 0 1 181.12 0H896v64H762.56a96.064 96.064 0 0 1-181.12 0H128v-64zm-320-288a96.064 96.064 0 0 1 181.12 0H896v64H442.56a96.064 96.064 0 0 1-181.12 0H128v-64z"></path></svg>'],
                                 '发送邀请'=>["invite.php?id=".$CURUSER['id'], '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" data-v-ea893728=""><path fill="currentColor" d="M512 386.88V448h405.568a32 32 0 0 1 30.72 40.768l-76.48 267.968A192 192 0 0 1 687.168 896H336.832a192 192 0 0 1-184.64-139.264L75.648 488.768A32 32 0 0 1 106.368 448H448V117.888a32 32 0 0 1 47.36-28.096l13.888 7.616L512 96v2.88l231.68 126.4a32 32 0 0 1-2.048 57.216zm0-70.272 144.768-65.792L512 171.84zM512 512H148.864l18.24 64H856.96l18.24-64zM185.408 640l28.352 99.2A128 128 0 0 0 336.832 832h350.336a128 128 0 0 0 123.072-92.8l28.352-99.2H185.408"></path></svg>'],
@@ -2842,10 +2907,10 @@ else {
                                 '大转盘'=>["plugin/lucky-draw",'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" data-v-ea893728=""><path fill="currentColor" d="M544 894.72a382.336 382.336 0 0 0 215.936-89.472L577.024 622.272c-10.24 6.016-21.248 10.688-33.024 13.696v258.688zm261.248-134.784A382.336 382.336 0 0 0 894.656 544H635.968c-3.008 11.776-7.68 22.848-13.696 33.024l182.976 182.912zM894.656 480a382.336 382.336 0 0 0-89.408-215.936L622.272 446.976c6.016 10.24 10.688 21.248 13.696 33.024h258.688zm-134.72-261.248A382.336 382.336 0 0 0 544 129.344v258.688c11.776 3.008 22.848 7.68 33.024 13.696zM480 129.344a382.336 382.336 0 0 0-215.936 89.408l182.912 182.976c10.24-6.016 21.248-10.688 33.024-13.696zm-261.248 134.72A382.336 382.336 0 0 0 129.344 480h258.688c3.008-11.776 7.68-22.848 13.696-33.024zM129.344 544a382.336 382.336 0 0 0 89.408 215.936l182.976-182.912A127.232 127.232 0 0 1 388.032 544zm134.72 261.248A382.336 382.336 0 0 0 480 894.656V635.968a127.232 127.232 0 0 1-33.024-13.696zM512 960a448 448 0 1 1 0-896 448 448 0 0 1 0 896m0-384a64 64 0 1 0 0-128 64 64 0 0 0 0 128"></path></svg>'],
                                 '排行榜'=>["topten.php",'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" data-v-ea893728=""><path fill="currentColor" d="M416 896V128h192v768zm-288 0V448h192v448zm576 0V320h192v576z"></path></svg>'],
                                 'RSS订阅'=>["getrss.php",'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" data-v-ea893728=""><path fill="currentColor" d="M715.648 625.152 670.4 579.904l90.496-90.56c75.008-74.944 85.12-186.368 22.656-248.896-62.528-62.464-173.952-52.352-248.96 22.656L444.16 353.6l-45.248-45.248 90.496-90.496c100.032-99.968 251.968-110.08 339.456-22.656 87.488 87.488 77.312 239.424-22.656 339.456l-90.496 90.496zm-90.496 90.496-90.496 90.496C434.624 906.112 282.688 916.224 195.2 828.8c-87.488-87.488-77.312-239.424 22.656-339.456l90.496-90.496 45.248 45.248-90.496 90.56c-75.008 74.944-85.12 186.368-22.656 248.896 62.528 62.464 173.952 52.352 248.96-22.656l90.496-90.496zm0-362.048 45.248 45.248L398.848 670.4 353.6 625.152z"></path></svg>'],
+                                'H&R'=>["myhr.php?status=1",'<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" viewBox="0 0 1024 1024" data-v-ea893728=""><path fill="currentColor" d="M928.99 755.83 574.6 203.25c-12.89-20.16-36.76-32.58-62.6-32.58s-49.71 12.43-62.6 32.58L95.01 755.83c-12.91 20.12-12.9 44.91.01 65.03 12.92 20.12 36.78 32.51 62.59 32.49h708.78c25.82.01 49.68-12.37 62.59-32.49 12.91-20.12 12.92-44.91.01-65.03M554.67 768h-85.33v-85.33h85.33zm0-426.67v298.66h-85.33V341.32z"></path></svg>'],
 //                            ''=>["",''],
                                 '联系管理'=>["contactstaff.php", '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" data-v-ea893728=""><path fill="currentColor" d="M864 409.6a192 192 0 0 1-37.888 349.44A256.064 256.064 0 0 1 576 960h-96a32 32 0 1 1 0-64h96a192.064 192.064 0 0 0 181.12-128H736a32 32 0 0 1-32-32V416a32 32 0 0 1 32-32h32c10.368 0 20.544.832 30.528 2.432a288 288 0 0 0-573.056 0A193.235 193.235 0 0 1 256 384h32a32 32 0 0 1 32 32v320a32 32 0 0 1-32 32h-32a192 192 0 0 1-96-358.4 352 352 0 0 1 704 0M256 448a128 128 0 1 0 0 256zm640 128a128 128 0 0 0-128-128v256a128 128 0 0 0 128-128"></path></svg>'],
-                                '站点规则'=>["rules.php", '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" data-v-ea893728=""><path fill="currentColor" d="M640 608h-64V416h64zm0 160v160a32 32 0 0 1-32 32H416a32 32 0 0 1-32-32V768h64v128h128V768zM384 608V416h64v192zm256-352h-64V128H448v128h-64V96a32 32 0 0 1 32-32h192a32 32 0 0 1 32 32z"></path><path fill="currentColor" d="m220.8 256-71.232 80 71.168 80H768V256H220.8zm-14.4-64H800a32 32 0 0 1 32 32v224a32 32 0 0 1-32 32H206.4a32 32 0 0 1-23.936-10.752l-99.584-112a32 32 0 0 1 0-42.496l99.584-112A32 32 0 0 1 206.4 192m678.784 496-71.104 80H266.816V608h547.2l71.168 80zm-56.768-144H234.88a32 32 0 0 0-32 32v224a32 32 0 0 0 32 32h593.6a32 32 0 0 0 23.936-10.752l99.584-112a32 32 0 0 0 0-42.496l-99.584-112A32 32 0 0 0 828.48 544z"></path></svg>'],
-                                '常见问题'=>["faq.php", '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" data-v-ea893728=""><path fill="currentColor" d="M512 64a448 448 0 1 1 0 896 448 448 0 0 1 0-896m0 832a384 384 0 0 0 0-768 384 384 0 0 0 0 768m48-176a48 48 0 1 1-96 0 48 48 0 0 1 96 0m-48-464a32 32 0 0 1 32 32v288a32 32 0 0 1-64 0V288a32 32 0 0 1 32-32"></path></svg>'],
+                                '站点规则'=>["custom_rules.php", '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" data-v-ea893728=""><path fill="currentColor" d="M640 608h-64V416h64zm0 160v160a32 32 0 0 1-32 32H416a32 32 0 0 1-32-32V768h64v128h128V768zM384 608V416h64v192zm256-352h-64V128H448v128h-64V96a32 32 0 0 1 32-32h192a32 32 0 0 1 32 32z"></path><path fill="currentColor" d="m220.8 256-71.232 80 71.168 80H768V256H220.8zm-14.4-64H800a32 32 0 0 1 32 32v224a32 32 0 0 1-32 32H206.4a32 32 0 0 1-23.936-10.752l-99.584-112a32 32 0 0 1 0-42.496l99.584-112A32 32 0 0 1 206.4 192m678.784 496-71.104 80H266.816V608h547.2l71.168 80zm-56.768-144H234.88a32 32 0 0 0-32 32v224a32 32 0 0 0 32 32h593.6a32 32 0 0 0 23.936-10.752l99.584-112a32 32 0 0 0 0-42.496l-99.584-112A32 32 0 0 0 828.48 544z"></path></svg>'],
                             ];
                             foreach ($nameIconArray as $menuName => $infoArr) {
                                 print("<a class='info-container-icon-a' href='".$infoArr[0]."'>");
@@ -2857,11 +2922,11 @@ else {
                             // 管理权限工具
                             $nameIconArrayManager = [];
                             if (get_user_row($CURUSER['id'])['class'] >= 13) {
-                                $nameIconArrayManager['管理面板']=["staffpanel.php",'<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" viewBox="0 0 1024 1024" data-v-ea893728=""><path fill="currentColor" d="M938.67 512.01c0-44.59-6.82-87.6-19.54-128H682.67a212.372 212.372 0 0 1 42.67 128c.06 38.71-10.45 76.7-30.42 109.87l-182.91 316.8c235.65-.01 426.66-191.02 426.66-426.67z"></path><path fill="currentColor" d="M576.79 401.63a127.92 127.92 0 0 0-63.56-17.6c-22.36-.22-44.39 5.43-63.89 16.38s-35.79 26.82-47.25 46.02a128.005 128.005 0 0 0-2.16 127.44l1.24 2.13a127.906 127.906 0 0 0 46.36 46.61 127.907 127.907 0 0 0 63.38 17.44c22.29.2 44.24-5.43 63.68-16.33a127.94 127.94 0 0 0 47.16-45.79v-.01l1.11-1.92a127.984 127.984 0 0 0 .29-127.46 127.957 127.957 0 0 0-46.36-46.91"></path><path fill="currentColor" d="M394.45 333.96A213.336 213.336 0 0 1 512 298.67h369.58A426.503 426.503 0 0 0 512 85.34a425.598 425.598 0 0 0-171.74 35.98 425.644 425.644 0 0 0-142.62 102.22l118.14 204.63a213.397 213.397 0 0 1 78.67-94.21m117.56 604.72H512zm-97.25-236.73a213.284 213.284 0 0 1-89.54-86.81L142.48 298.6c-36.35 62.81-57.13 135.68-57.13 213.42 0 203.81 142.93 374.22 333.95 416.55h.04l118.19-204.71a213.315 213.315 0 0 1-122.77-21.91z"></path></svg>'];
+                                $nameIconArrayManager['管理前台']=["staffpanel.php",'<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" viewBox="0 0 1024 1024" data-v-ea893728=""><path fill="currentColor" d="M938.67 512.01c0-44.59-6.82-87.6-19.54-128H682.67a212.372 212.372 0 0 1 42.67 128c.06 38.71-10.45 76.7-30.42 109.87l-182.91 316.8c235.65-.01 426.66-191.02 426.66-426.67z"></path><path fill="currentColor" d="M576.79 401.63a127.92 127.92 0 0 0-63.56-17.6c-22.36-.22-44.39 5.43-63.89 16.38s-35.79 26.82-47.25 46.02a128.005 128.005 0 0 0-2.16 127.44l1.24 2.13a127.906 127.906 0 0 0 46.36 46.61 127.907 127.907 0 0 0 63.38 17.44c22.29.2 44.24-5.43 63.68-16.33a127.94 127.94 0 0 0 47.16-45.79v-.01l1.11-1.92a127.984 127.984 0 0 0 .29-127.46 127.957 127.957 0 0 0-46.36-46.91"></path><path fill="currentColor" d="M394.45 333.96A213.336 213.336 0 0 1 512 298.67h369.58A426.503 426.503 0 0 0 512 85.34a425.598 425.598 0 0 0-171.74 35.98 425.644 425.644 0 0 0-142.62 102.22l118.14 204.63a213.397 213.397 0 0 1 78.67-94.21m117.56 604.72H512zm-97.25-236.73a213.284 213.284 0 0 1-89.54-86.81L142.48 298.6c-36.35 62.81-57.13 135.68-57.13 213.42 0 203.81 142.93 374.22 333.95 416.55h.04l118.19-204.71a213.315 213.315 0 0 1-122.77-21.91z"></path></svg>'];
                             }
                             if (get_user_row($CURUSER['id'])['class'] >= 14) {
                                 $nameIconArrayManager['站点设定']=["settings.php",'<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" viewBox="0 0 1024 1024" data-v-ea893728=""><path fill="currentColor" d="M938.67 512.01c0-44.59-6.82-87.6-19.54-128H682.67a212.372 212.372 0 0 1 42.67 128c.06 38.71-10.45 76.7-30.42 109.87l-182.91 316.8c235.65-.01 426.66-191.02 426.66-426.67z"></path><path fill="currentColor" d="M576.79 401.63a127.92 127.92 0 0 0-63.56-17.6c-22.36-.22-44.39 5.43-63.89 16.38s-35.79 26.82-47.25 46.02a128.005 128.005 0 0 0-2.16 127.44l1.24 2.13a127.906 127.906 0 0 0 46.36 46.61 127.907 127.907 0 0 0 63.38 17.44c22.29.2 44.24-5.43 63.68-16.33a127.94 127.94 0 0 0 47.16-45.79v-.01l1.11-1.92a127.984 127.984 0 0 0 .29-127.46 127.957 127.957 0 0 0-46.36-46.91"></path><path fill="currentColor" d="M394.45 333.96A213.336 213.336 0 0 1 512 298.67h369.58A426.503 426.503 0 0 0 512 85.34a425.598 425.598 0 0 0-171.74 35.98 425.644 425.644 0 0 0-142.62 102.22l118.14 204.63a213.397 213.397 0 0 1 78.67-94.21m117.56 604.72H512zm-97.25-236.73a213.284 213.284 0 0 1-89.54-86.81L142.48 298.6c-36.35 62.81-57.13 135.68-57.13 213.42 0 203.81 142.93 374.22 333.95 416.55h.04l118.19-204.71a213.315 213.315 0 0 1-122.77-21.91z"></path></svg>'];
-                                $nameIconArrayManager['管理系统']=["nexusphp",'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" data-v-ea893728=""><path fill="currentColor" d="M448 832v-64h128v64h192v64H256v-64zM128 704V128h768v576z"></path></svg>'];
+                                $nameIconArrayManager['管理后台']=["nexusphp",'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" data-v-ea893728=""><path fill="currentColor" d="M448 832v-64h128v64h192v64H256v-64zM128 704V128h768v576z"></path></svg>'];
                                 $nameIconArrayManager['管理成员']=["staff.php",'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" data-v-ea893728=""><path fill="currentColor" d="M628.736 528.896A416 416 0 0 1 928 928H96a415.872 415.872 0 0 1 299.264-399.104L512 704zM720 304a208 208 0 1 1-416 0 208 208 0 0 1 416 0"></path></svg>'];
                                 $nameIconArrayManager['日志']=["log.php",'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" data-v-ea893728=""><path fill="currentColor" d="M128 320v576h576V320zm-32-64h640a32 32 0 0 1 32 32v640a32 32 0 0 1-32 32H96a32 32 0 0 1-32-32V288a32 32 0 0 1 32-32M960 96v704a32 32 0 0 1-32 32h-96v-64h64V128H384v64h-64V96a32 32 0 0 1 32-32h576a32 32 0 0 1 32 32M256 672h320v64H256zm0-192h320v64H256z"></path></svg>'];
                                 $nameIconArrayManager['作弊者']=["cheaterbox.php",'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" data-v-ea893728=""><path fill="currentColor" d="M628.736 528.896A416 416 0 0 1 928 928H96a415.872 415.872 0 0 1 299.264-399.104L512 704zM720 304a208 208 0 1 1-416 0 208 208 0 0 1 416 0"></path></svg>'];
@@ -2918,8 +2983,10 @@ else {
 <!--                可连接性-->
                 <font class='color_connectable'><?php echo $lang_functions['text_connectable'] ?></font><?php echo $connectable?> <?php echo maxslots();?>
 
-                <?php if(\App\Models\HitAndRun::getIsEnabled()) { ?><font class='color_bonus'>H&R: </font> <?php echo sprintf('[<a href="myhr.php">%s</a>]', (new \App\Repositories\HitAndRunRepository())->getStatusStats($CURUSER['id']))?><?php }?>
-                <?php if(\App\Models\Claim::getConfigIsEnabled()) { ?><font class='color_bonus'><?php echo $lang_functions['menu_claim']?></font> <?php echo sprintf('[<a href="claim.php?uid=%s">%s</a>]', $CURUSER['id'], (new \App\Repositories\ClaimRepository())->getStats($CURUSER['id']))?><?php }?>
+                <?php if(\App\Models\HitAndRun::getIsEnabled()) { ?>
+                    <font class='color_bonus'>H&R: </font> <?php echo sprintf('[<a href="myhr.php">%s</a>]', (new \App\Repositories\HitAndRunRepository())->getStatusStats($CURUSER['id']))?><?php }?>
+                <?php if(\App\Models\Claim::getConfigIsEnabled()) { ?>
+                    <font class='color_bonus'><?php echo $lang_functions['menu_claim']?></font> <?php echo sprintf('[<a href="claim.php?uid=%s">%s</a>]', $CURUSER['id'], (new \App\Repositories\ClaimRepository())->getStats($CURUSER['id']))?><?php }?>
             </span>
         </td>
                 <?php if(SearchBox::isSpecialEnabled() && get_setting('main.enable_global_search') == 'yes'){?>
@@ -3154,7 +3221,8 @@ if ($msgalert)
 
 
 function stdfoot() {
-	global $SITENAME,$BASEURL,$Cache,$datefounded,$tstart,$icplicense_main,$add_key_shortcut,$query_name, $USERUPDATESET, $CURUSER, $enablesqldebug_tweak, $sqldebug_tweak, $Advertisement, $analyticscode_tweak;
+	print('<script type="text/javascript" src="js/slide.js"></script>');
+    global $SITENAME,$BASEURL,$Cache,$datefounded,$tstart,$icplicense_main,$add_key_shortcut,$query_name, $USERUPDATESET, $CURUSER, $enablesqldebug_tweak, $sqldebug_tweak, $Advertisement, $analyticscode_tweak;
 	global $hook;
 	print("</td></tr></table>");
 	print("<div id=\"footer\">");
@@ -3177,10 +3245,11 @@ function stdfoot() {
 	// ########页尾友情链接#######
 	// #########################
     $linkList = \Nexus\Database\NexusDB::table("links")->get();
-    print ("<div style='font-size: 15px;'> 友情链接 - ");
+    print ("<div style='font-size: 12px;'> 友情链接 - ");
     foreach ($linkList as $link) {
         print ("<a href='".$link->url."'>".$link->name."</a>&nbsp;&nbsp;");
     }
+    print("<br><br>本站列出的文件并没有保存在本站的服务器上。本站仅负责连接，我们对被传播文件的内容一无所知。本站的链接均由用户自发提供。<br>PTVicomo的管理员无法对用户的提交内容或其他行为负责。您不能使用PTVicomo传播或下载任何您没有使用许可的文件或材料，由此引起的后果由您自己承担。");
     print("</div><br>");
 	// #########################
 	// #########################
@@ -3379,6 +3448,41 @@ function deletetorrent($id, $notify = false) {
 	foreach(array("peers", "files", "comments") as $x) {
         \Nexus\Database\NexusDB::statement("DELETE FROM $x WHERE torrent in ($idStr)");
 	}
+    \Nexus\Database\NexusDB::statement("DELETE FROM hit_and_runs WHERE torrent_id in ($idStr)");
+    \Nexus\Database\NexusDB::statement("DELETE FROM claims WHERE torrent_id in ($idStr)");
+    foreach ($torrentInfo as $_id => $info) {
+        if ($torrentInfo->has($_id)) {
+            $torrentRep->delPiecesHashCache($torrentInfo->get($_id)->pieces_hash);
+        }
+        do_action("torrent_delete", $_id);
+        do_log("delete torrent: $_id", "error");
+        unlink(getFullDirectory("$torrent_dir/$_id.torrent"));
+        \App\Models\TorrentOperationLog::add([
+            'torrent_id' => $_id,
+            'uid' => get_user_id(),
+            'action_type' => \App\Models\TorrentOperationLog::ACTION_TYPE_DELETE,
+            'comment' => '',
+        ], $notify);
+    }
+    $meiliSearchRep = new \App\Repositories\MeiliSearchRepository();
+    $meiliSearchRep->deleteDocuments($idArr);
+}
+
+function tmpDeletetorrent($id, $notify = false) {
+    $idArr = is_array($id) ? $id : [$id];
+    $torrentInfo = \Nexus\Database\NexusDB::table("torrents_tmp")
+        ->whereIn("id", $idArr)
+        ->get(['id', 'pieces_hash'])
+        ->KeyBy("id")
+    ;
+    $torrentRep = new \App\Repositories\TorrentRepository();
+    $idStr = implode(', ', $idArr ?: [0]);
+    $torrent_dir = get_setting('main.torrent_dir');
+    \Nexus\Database\NexusDB::statement("DELETE FROM torrents WHERE id in ($idStr)");
+    \Nexus\Database\NexusDB::statement("DELETE FROM snatched WHERE torrentid in ($idStr)");
+    foreach(array("peers", "files", "comments") as $x) {
+        \Nexus\Database\NexusDB::statement("DELETE FROM $x WHERE torrent in ($idStr)");
+    }
     \Nexus\Database\NexusDB::statement("DELETE FROM hit_and_runs WHERE torrent_id in ($idStr)");
     \Nexus\Database\NexusDB::statement("DELETE FROM claims WHERE torrent_id in ($idStr)");
     foreach ($torrentInfo as $_id => $info) {
@@ -3649,6 +3753,451 @@ function get_torrent_bookmark_state($userid, $torrentid, $text = false)
 		$act = ($text == true ? $lang_functions['title_delbookmark_torrent'] : "<img class=\"bookmark\" src=\"pic/trans.gif\" alt=\"Bookmarked\" title=\"".$lang_functions['title_delbookmark_torrent']."\" />");
 	return $act;
 }
+function torrentTmptable($rows, $variant = "torrent", $searchBoxId = 0) {
+        global $Cache;
+        global $lang_functions;
+        global $CURUSER, $waitsystem;
+        global $showextinfo;
+        global $torrentmanage_class, $smalldescription_main, $enabletooltip_tweak, $staffmem_class;
+        global $CURLANGDIR;
+
+        $torrent = new Nexus\Torrent\Torrent();
+        $torrentRep = new \App\Repositories\TorrentRepository();
+        $imdb = new \Nexus\Imdb\Imdb();
+        $torrentIdArr = $ownerIdArr = [];
+        foreach($rows as $row) {
+            $torrentIdArr[] = $row['id'];
+            $ownerIdArr[] = $row['owner'];
+        }
+        unset($row);
+
+        $enableImdb = get_setting("main.showimdbinfo") == 'yes';
+        $enablePtGen = get_setting('main.enable_pt_gen_systemyes') == 'yes';
+
+        $torrentSeedingLeechingStatus = $torrent->listLeechingSeedingStatus($CURUSER['id'], $torrentIdArr);
+        $tagRep = new \App\Repositories\TagRepository();
+        $torrentTagCollection = \App\Models\TorrentTag::query()->whereIn('torrent_id', $torrentIdArr)->get();
+        $torrentTagResult = $torrentTagCollection->groupBy('torrent_id');
+        $showCover = false;
+        $showSeedBoxIcon = false;
+        if ($searchBoxId) {
+            $searchBoxExtra = get_searchbox_value($searchBoxId, "extra");
+            if (!empty($searchBoxExtra[\App\Models\SearchBox::EXTRA_DISPLAY_COVER_ON_TORRENT_LIST])) {
+                $showCover = true;
+            }
+            $showSeedBoxIcon = get_setting('seed_box.enabled') == 'yes';
+            if (empty($searchBoxExtra[\App\Models\SearchBox::EXTRA_DISPLAY_SEED_BOX_ICON_ON_TORRENT_LIST])) {
+                $showSeedBoxIcon = false;
+            }
+        }
+        //seedBoxIcon
+        if ($showSeedBoxIcon) {
+            $seedBoxRep = new \App\Repositories\SeedBoxRepository();
+            $seedBoxPeerInfo = \App\Models\Peer::query()
+                ->whereIn('torrent', $torrentIdArr)
+                ->where('seeder', 'yes')
+                ->where('is_seed_box', '1')
+                ->get(['torrent', 'is_seed_box'])
+                ->keyBy('torrent');
+        }
+
+
+        $last_browse = $CURUSER['last_browse'];
+        //	if ($variant == "torrent"){
+        //		$last_browse = $CURUSER['last_browse'];
+        //		$sectiontype = $browsecatmode;
+        //	}
+        //	elseif($variant == "music"){
+        //		$last_browse = $CURUSER['last_music'];
+        //		$sectiontype = $specialcatmode;
+        //	}
+        //	else{
+        //		$last_browse = $CURUSER['last_browse'];
+        //		$sectiontype = "";
+        //	}
+
+        $time_now = TIMENOW;
+        if ($last_browse > $time_now) {
+            $last_browse=$time_now;
+        }
+        $wait = 0;
+        if (get_user_class() < UC_VIP && $waitsystem == "yes") {
+            $ratio = get_ratio($CURUSER["id"], false);
+            $gigs = $CURUSER["uploaded"] / (1024*1024*1024);
+            if($gigs > 10)
+            {
+                if ($ratio < 0.4) $wait = 24;
+                elseif ($ratio < 0.5) $wait = 12;
+                elseif ($ratio < 0.6) $wait = 6;
+                elseif ($ratio < 0.8) $wait = 3;
+                else $wait = 0;
+            }
+            else $wait = 0;
+        }
+        ?>
+        <table class="torrents" cellspacing="0" cellpadding="5" width="100%">
+            <tr>
+                <?php
+                $count_get = 0;
+                $oldlink = "";
+                foreach ($_GET as $get_name => $get_value) {
+                    $get_name = mysql_real_escape_string(strip_tags(str_replace(array("\"","'"),array("",""),$get_name)));
+                    $get_value = mysql_real_escape_string(strip_tags(str_replace(array("\"","'"),array("",""),$get_value)));
+
+                    if ($get_name != "sort" && $get_name != "type") {
+                        if ($count_get > 0) {
+                            $oldlink .= "&amp;" . $get_name . "=" . $get_value;
+                        }
+                        else {
+                            $oldlink .= $get_name . "=" . $get_value;
+                        }
+                        $count_get++;
+                    }
+                }
+                if ($count_get > 0) {
+                    $oldlink = $oldlink . "&amp;";
+                }
+                $sort = $_GET['sort'] ?? '';
+                $link = array();
+                for ($i=1; $i<=9; $i++){
+                    if ($sort == $i)
+                        $link[$i] = ($_GET['type'] == "desc" ? "asc" : "desc");
+                    else $link[$i] = ($i == 1 ? "asc" : "desc");
+                }
+                ?>
+                <td class="colhead" style="padding: 0px"><?php echo $lang_functions['col_type'] ?></td>
+                <td class="colhead"><a href="?<?php echo $oldlink?>sort=1&amp;type=<?php echo $link[1]?>"><?php echo $lang_functions['col_name'] ?></a></td>
+                <?php
+
+                if ($wait)
+                {
+                    print("<td class=\"colhead\">".$lang_functions['col_wait']."</td>\n");
+                }
+                if ($CURUSER['showcomnum'] != 'no') { ?>
+                    <td class="colhead"><a href="?<?php echo $oldlink?>sort=3&amp;type=<?php echo $link[3]?>"><img class="comments" src="pic/trans.gif" alt="comments" title="<?php echo $lang_functions['title_number_of_comments'] ?>" /></a></td>
+                <?php } ?>
+
+                <td class="colhead"><a href="?<?php echo $oldlink?>sort=4&amp;type=<?php echo $link[4]?>"><img class="time" src="pic/trans.gif" alt="time" title="<?php echo ($CURUSER['timetype'] != 'timealive' ? $lang_functions['title_time_added'] : $lang_functions['title_time_alive'])?>" /></a></td>
+                <td class="colhead"><a href="?<?php echo $oldlink?>sort=5&amp;type=<?php echo $link[5]?>"><img class="size" src="pic/trans.gif" alt="size" title="<?php echo $lang_functions['title_size'] ?>" /></a></td>
+                <td class="colhead"><a href="?<?php echo $oldlink?>sort=7&amp;type=<?php echo $link[7]?>"><img class="seeders" src="pic/trans.gif" alt="seeders" title="<?php echo $lang_functions['title_number_of_seeders'] ?>" /></a></td>
+                <td class="colhead"><a href="?<?php echo $oldlink?>sort=8&amp;type=<?php echo $link[8]?>"><img class="leechers" src="pic/trans.gif" alt="leechers" title="<?php echo $lang_functions['title_number_of_leechers'] ?>" /></a></td>
+                <td class="colhead"><a href="?<?php echo $oldlink?>sort=6&amp;type=<?php echo $link[6]?>"><img class="snatched" src="pic/trans.gif" alt="snatched" title="<?php echo $lang_functions['title_number_of_snatched']?>" /></a></td>
+                <td class="colhead"><a href="?<?php echo $oldlink?>sort=9&amp;type=<?php echo $link[9]?>"><?php echo $lang_functions['col_uploader']?></a></td>
+                <td class="colhead"><?php echo $lang_functions['col_action'] ?></td>
+<!--                --><?php
+//                if (user_can('torrentmanage')) { ?>
+<!--                    <td class="colhead">--><?php //echo $lang_functions['col_action'] ?><!--</td>-->
+<!--                --><?php //} ?>
+            </tr>
+            <?php
+            $caticonrow = get_category_icon_row($CURUSER['caticon']);
+            if ($caticonrow['secondicon'] == 'yes')
+                $has_secondicon = true;
+            else $has_secondicon = false;
+            $counter = 0;
+            if ($smalldescription_main == 'no' || $CURUSER['showsmalldescr'] == 'no')
+                $displaysmalldescr = false;
+            else $displaysmalldescr = true;
+            //while ($row = mysql_fetch_assoc($res))
+            $lastcom_tooltip = [];
+            $torrent_tooltip = [];
+            foreach ($rows as $row)
+            {
+                $id = $row["id"];
+                $sphighlight = get_torrent_bg_color($row['sp_state'], $row['pos_state'], $row);
+                print("<tr" . $sphighlight . ">\n");
+
+                print("<td class=\"rowfollow nowrap\" valign=\"middle\" style='padding: 0px'>");
+                if (isset($row["category"])) {
+                    print(return_category_image($row["category"], "?"));
+                    if ($has_secondicon){
+                        print(get_second_icon($row));
+                    }
+                }
+                else
+                    print("-");
+                print("</td>\n");
+
+                //torrent name
+                $dispname = trim($row["name"]);
+                $short_torrent_name_alt = "";
+                $mouseovertorrent = "";
+                $tooltipblock = "";
+                $has_tooltip = false;
+                if ($enabletooltip_tweak == 'yes')
+                    $tooltiptype = $CURUSER['tooltip'];
+                else
+                    $tooltiptype = 'off';
+                switch ($tooltiptype){
+                    case 'minorimdb' : {
+                        if ($showextinfo['imdb'] == 'yes' && $row["url"])
+                        {
+                            $url = $row['url'];
+                            $cache = $row['cache_stamp'];
+                            $type = 'minor';
+                            $has_tooltip = true;
+                        }
+                        break;
+                    }
+                    case 'medianimdb' :
+                    {
+                        if ($showextinfo['imdb'] == 'yes' && $row["url"])
+                        {
+                            $url = $row['url'];
+                            $cache = $row['cache_stamp'];
+                            $type = 'median';
+                            $has_tooltip = true;
+                        }
+                        break;
+                    }
+                    case 'off' :  break;
+                }
+                if (!$has_tooltip)
+                    $short_torrent_name_alt = "title=\"".htmlspecialchars($dispname)."\"";
+                else{
+                    $torrent_tooltip[$counter]['id'] = "torrent_" . $counter;
+                    $torrent_tooltip[$counter]['content'] = "";
+                    $mouseovertorrent = "onmouseover=\"get_ext_info_ajax('".$torrent_tooltip[$counter]['id']."','".$url."','".$cache."','".$type."'); domTT_activate(this, event, 'content', document.getElementById('" . $torrent_tooltip[$counter]['id'] . "'), 'trail', false, 'delay',600,'lifetime',6000,'fade','both','styleClass','niceTitle', 'fadeMax',87, 'maxWidth', 500);\"";
+                }
+                $count_dispname=mb_strlen($dispname,"UTF-8");
+                if (!$displaysmalldescr || $row["small_descr"] == "")// maximum length of torrent name
+                    $max_length_of_torrent_name = 200;
+                elseif ($CURUSER['fontsize'] == 'large')
+                    $max_length_of_torrent_name = 120;
+                elseif ($CURUSER['fontsize'] == 'small')
+                    $max_length_of_torrent_name = 160;
+                else $max_length_of_torrent_name = 140;
+
+                if($count_dispname > $max_length_of_torrent_name)
+                    $dispname=mb_substr($dispname, 0, $max_length_of_torrent_name-2,"UTF-8") . "..";
+                if ($CURUSER['appendsticky'] == 'yes') {
+                    $posStates = \App\Models\Torrent::listPosStates();
+                    $stickyicon = str_repeat("<img class=\"sticky\" src=\"pic/trans.gif\" alt=\"Sticky\" title=\"".$posStates[$row['pos_state']]['text']."\" />&nbsp;", $posStates[$row['pos_state']]['icon_counts'] ?? 0);
+                } else {
+                    $stickyicon = "";
+                }
+                $stickyicon = apply_filter('sticky_icon', $stickyicon, $row);
+                $sp_torrent = get_torrent_promotion_append($row['sp_state'],"",true,$row["added"], $row['promotion_time_type'], $row['promotion_until'], $row['__ignore_global_sp_state'] ?? false);
+                //#####agsv候选#######$
+                $row['search_box_id'] = 0;
+                //#####agsv候选#######@
+                $hrImg = get_hr_img($row, $row['search_box_id']);
+
+                //cover
+                $coverSrc = $tdCover = '';
+                if ($showCover) {
+                    if ($imdb_id = parse_imdb_id($row["url"])) {
+                        try {
+                            if ($imdb->getCacheStatus($imdb_id) == 1) {
+                                $coverSrc = $imdb->getMovie($imdb_id)->photo(false);
+                            }
+                        } catch (\Exception $exception) {
+                            do_log("torrent: {$row['id']} get cover from imdb error: ".$exception->getMessage() . "\n[stacktrace]\n" . $exception->getTraceAsString(), 'error');
+                        }
+                    }
+                    if (empty($coverSrc) && !empty($row['cover'])) {
+                        $coverSrc = $row['cover'];
+                    }
+                    $tdCover = sprintf('<td class="embedded" style="text-align: center;width: 46px;height: 46px"><img src="pic/misc/spinner.svg" data-src="%s" class="nexus-lazy-load" style="max-height: 46px;max-width: 46px" /></td>', $coverSrc);
+                }
+
+                print("<td class=\"rowfollow\" width=\"100%\" align=\"left\" style='padding: 0px'><table class=\"torrentname\" width=\"100%\"><tr" . $sphighlight . ">$tdCover<td class=\"embedded\" style='padding-left: 5px'>".$stickyicon."<a $short_torrent_name_alt $mouseovertorrent href=\"details_tmp.php?id=".$id."&amp;hit=1\"><b>".htmlspecialchars($dispname)."</b></a>");
+                $picked_torrent = "";
+                if ($CURUSER['appendpicked'] != 'no'){
+                    if($row['picktype']=="hot")
+                        $picked_torrent = " <b>[<font class='hot'>".$lang_functions['text_hot']."</font>]</b>";
+                    elseif($row['picktype']=="classic")
+                        $picked_torrent = " <b>[<font class='classic'>".$lang_functions['text_classic']."</font>]</b>";
+                    elseif($row['picktype']=="recommended")
+                        $picked_torrent = " <b>[<font class='recommended'>".$lang_functions['text_recommended']."</font>]</b>";
+                }
+                if ($CURUSER['appendnew'] != 'no' && strtotime($row["added"]) >= $last_browse)
+                    print("<b> (<font class='new'>".$lang_functions['text_new_uppercase']."</font>)</b>");
+
+                $banned_torrent = ($row["banned"] == 'yes' ? " <b>(<font class=\"striking\">".$lang_functions['text_banned']."</font>)</b>" : "");
+                $sp_torrent_sub = get_torrent_promotion_append_sub($row['sp_state'],"",true,$row['added'], $row['promotion_time_type'], $row['promotion_until'], $row['__ignore_global_sp_state'] ?? false);
+                $approvalStatusIcon = $torrentRep->renderApprovalStatus($row['approval_status']);
+                if ($showSeedBoxIcon && $seedBoxPeerInfo->has($row['id'])) {
+                    $seedBoxIcon = $seedBoxRep->getSeedBoxIcon();
+                } else {
+                    $seedBoxIcon = '';
+                }
+                $paidIcon = $torrentRep->getPaidIcon($row);
+                $titleSuffix = $banned_torrent.$paidIcon.$picked_torrent.$sp_torrent.$sp_torrent_sub. $hrImg . $seedBoxIcon . $approvalStatusIcon;
+                $titleSuffix = apply_filter('torrent_title_suffix', $titleSuffix, $row);
+                print($titleSuffix);
+                /**
+                 * render tags
+                 */
+                $tagOwns = $torrentTagResult->get($id);
+                if ($tagOwns) {
+                    $tags = $tagRep->renderSpan($row['search_box_id'], $tagOwns->pluck('tag_id')->toArray());
+                } else {
+                    $tags = '';
+                }
+
+                if ($displaysmalldescr){
+                    //small descr
+                    $dissmall_descr = trim($row["small_descr"]);
+                    $count_dissmall_descr=mb_strlen($dissmall_descr,"UTF-8");
+                    $max_lenght_of_small_descr=$max_length_of_torrent_name; // maximum length
+                    if($count_dissmall_descr > $max_lenght_of_small_descr)
+                    {
+                        $dissmall_descr=mb_substr($dissmall_descr, 0, $max_lenght_of_small_descr-2,"UTF-8") . "..";
+                    }
+                    $dissmall_descr = $tags . htmlspecialchars($dissmall_descr);
+                    print($dissmall_descr == "" ? "" : "<br />".$dissmall_descr);
+                } else {
+                    print($tags ? "<br />$tags" : "");
+                }
+                //progress bar
+                if (isset($torrentSeedingLeechingStatus[$row['id']])) {
+                    echo $torrent->renderProgressBar($torrentSeedingLeechingStatus[$row['id']]['active_status'], $torrentSeedingLeechingStatus[$row['id']]['progress']);
+                }
+                print("</td>");
+
+                if ($enableImdb || $enablePtGen) {
+                    echo $torrent->renderTorrentsPageAverageRating($row);
+                }
+                $act = "";
+                if ($CURUSER["dlicon"] != 'no' && $CURUSER["downloadpos"] != "no")
+                    $act .= "<a href=\"download_tmp.php?id=".$id."\"><img class=\"download\" src=\"pic/trans.gif\" style='padding-bottom: 2px;' alt=\"download\" title=\"".$lang_functions['title_download_torrent']."\" /></a>" ;
+                // no 收藏
+//                if ($CURUSER["bmicon"] == 'yes'){
+//                    $bookmark = " href=\"javascript: bookmark(".$id.",".$counter.");\"";
+//                    $act .= ($act ? "<br />" : "")."<a id=\"bookmark".$counter."\" ".$bookmark." >".get_torrent_bookmark_state($CURUSER['id'], $id)."</a>";
+//                }
+
+                print("<td width=\"20\" class=\"embedded\" style=\"text-align: right;padding-right: 5px\" valign=\"middle\">".$act."</td>\n");
+
+                print("</tr></table></td>");
+                if ($wait)
+                {
+                    $elapsed = floor((TIMENOW - strtotime($row["added"])) / 3600);
+                    if ($elapsed < $wait)
+                    {
+                        $color = dechex(floor(127*($wait - $elapsed)/48 + 128)*65536);
+                        print("<td class=\"rowfollow nowrap\"><a href=\"faq.php#id46\"><font color=\"".$color."\">" . number_format($wait - $elapsed) . $lang_functions['text_h']."</font></a></td>\n");
+                    }
+                    else
+                        print("<td class=\"rowfollow nowrap\">".$lang_functions['text_none']."</td>\n");
+                }
+
+                if ($CURUSER['showcomnum'] != 'no')
+                {
+                    print("<td class=\"rowfollow\">");
+                    $nl = "";
+
+                    //comments
+
+                    $nl = "<br />";
+                    if (!$row["comments"]) {
+                        print("<a href=\"comment.php?action=add&amp;pid=".$id."&amp;type=torrent\" title=\"".$lang_functions['title_add_comments']."\">" . $row["comments"] .  "</a>");
+                    } else {
+                        if ($enabletooltip_tweak == 'yes' && $CURUSER['showlastcom'] != 'no')
+                        {
+                            if (!$lastcom = $Cache->get_value('torrent_'.$id.'_last_comment_content')){
+                                $res2 = sql_query("SELECT user, added, text FROM comments WHERE torrent = $id ORDER BY id DESC LIMIT 1");
+                                $lastcom = mysql_fetch_array($res2);
+                                $Cache->cache_value('torrent_'.$id.'_last_comment_content', $lastcom, 1855);
+                            }
+                            $timestamp = strtotime($lastcom["added"]);
+                            $hasnewcom = ($lastcom['user'] != $CURUSER['id'] && $timestamp >= $last_browse);
+                            if ($lastcom)
+                            {
+                                if ($CURUSER['timetype'] != 'timealive')
+                                    $lastcomtime = $lang_functions['text_at_time'].$lastcom['added'];
+                                else
+                                    $lastcomtime = $lang_functions['text_blank'].gettime($lastcom["added"],true,false,true);
+                                $lastcom_tooltip[$counter]['id'] = "lastcom_" . $counter;
+                                $lastcom_tooltip[$counter]['content'] = ($hasnewcom ? "<b>(<font class='new'>".$lang_functions['text_new_uppercase']."</font>)</b> " : "").$lang_functions['text_last_commented_by'].get_username($lastcom['user']) . $lastcomtime."<br />". format_comment(mb_substr($lastcom['text'],0,100,"UTF-8") . (mb_strlen($lastcom['text'],"UTF-8") > 100 ? " ......" : "" ),true,false,false,true,600,false,false);
+                                $onmouseover = "onmouseover=\"domTT_activate(this, event, 'content', document.getElementById('" . $lastcom_tooltip[$counter]['id'] . "'), 'trail', false, 'delay', 500,'lifetime',3000,'fade','both','styleClass','niceTitle','fadeMax', 87,'maxWidth', 400);\"";
+                            }
+                        } else {
+                            $hasnewcom = false;
+                            $onmouseover = "";
+                        }
+                        print("<b><a href=\"details.php?id=".$id."&amp;hit=1&amp;cmtpage=1#startcomments\" ".$onmouseover.">". ($hasnewcom ? "<font class='new'>" : ""). $row["comments"] .($hasnewcom ? "</font>" : ""). "</a></b>");
+                    }
+
+                    print("</td>");
+                }
+
+                $time = $row["added"];
+                $time = gettime($time,false,true);
+                print("<td class=\"rowfollow nowrap\">". $time. "</td>");
+
+                //size
+                print("<td class=\"rowfollow\">" . mksize_compact($row["size"])."</td>");
+
+                if ($row["seeders"]) {
+                    $ratio = ($row["leechers"] ? ($row["seeders"] / $row["leechers"]) : 1);
+                    $ratiocolor = get_slr_color($ratio);
+                    print("<td class=\"rowfollow\" align=\"center\"><b><a href=\"details.php?id=".$id."&amp;hit=1&amp;dllist=1#seeders\">".($ratiocolor ? "<font color=\"" .
+                            $ratiocolor . "\">" . number_format($row["seeders"]) . "</font>" : number_format($row["seeders"]))."</a></b></td>\n");
+                }
+                else
+                    print("<td class=\"rowfollow\"><span class=\"" . linkcolor($row["seeders"]) . "\">" . number_format($row["seeders"]) . "</span></td>\n");
+
+                if ($row["leechers"]) {
+                    print("<td class=\"rowfollow\"><b><a href=\"details.php?id=".$id."&amp;hit=1&amp;dllist=1#leechers\">" .
+                        number_format($row["leechers"]) . "</a></b></td>\n");
+                }
+                else
+                    print("<td class=\"rowfollow\">0</td>\n");
+
+                if ($row["times_completed"] >=1)
+                    print("<td class=\"rowfollow\"><a href=\"viewsnatches.php?id=".$row['id']."\"><b>" . number_format($row["times_completed"]) . "</b></a></td>\n");
+                else
+                    print("<td class=\"rowfollow\">" . number_format($row["times_completed"]) . "</td>\n");
+
+                if (
+                    $row["anonymous"] == "yes"
+                    && (user_can('viewanonymous') || (isset($row['owner']) && $row['owner'] == $CURUSER['id']))
+                ) {
+                    print("<td class=\"rowfollow\" align=\"center\"><i>".$lang_functions['text_anonymous']."</i><br />".(isset($row["owner"]) ? "(" . get_username($row["owner"]) .")" : "<i>".$lang_functions['text_orphaned']."</i>") . "</td>\n");
+                }
+                elseif ($row["anonymous"] == "yes")
+                {
+                    print("<td class=\"rowfollow\"><i>".$lang_functions['text_anonymous']."</i></td>\n");
+                }
+                else
+                {
+                    print("<td class=\"rowfollow\">" . (isset($row["owner"]) ? get_username($row["owner"]) : "<i>".$lang_functions['text_orphaned']."</i>") . "</td>\n");
+                }
+
+                //#####agsv候选#######$ 改动种子的最后一个种子操作格
+                print("<td class=\"rowfollow\">");
+                if (user_can('torrentmanage'))
+                {
+                    print("<form action='?action=tmpAction' method='post'>
+                    <input type='hidden' name='tmp_id' value='".$row["id"]."' />
+                    <input type='hidden' name='tmp_owner' value='".$row["owner"]."' />
+                    <input type='hidden' name='tmp_cross' value='通过' />
+                    <input type=\"submit\" onclick=\"let crossInput = this.previousElementSibling; crossInput.value = '不通过';\" name=\"submit\" value='不通过' />
+                    <input type=\"submit\" onclick=\"let crossInput = this.previousElementSibling.previousElementSibling; crossInput.value = '通过';\" name=\"submit\" value='通过' />
+                    <input type=\"submit\" onclick=\"let crossInput = this.previousElementSibling.previousElementSibling.previousElementSibling; crossInput.value = '删除';\" name=\"submit\" value='删除' />
+                    <br><a href='edit_tmp.php?id=".$row["id"]."'>编辑</a>
+                    </form>");
+                } else if ($row['owner'] == $CURUSER['id']) {
+                    print("<a href='edit_tmp.php?id=".$row["id"]."'>编辑</a>");
+                } else {
+                    // 无权限
+                }
+                print("</td>\n");
+                //#####agsv候选#######@
+
+                print("</tr>\n");
+                $counter++;
+            }
+            print("</table>");
+            if ($CURUSER['appendpromotion'] == 'highlight')
+                print("<p align=\"center\"> ".$lang_functions['text_promoted_torrents_note']."</p>\n");
+
+            if($enabletooltip_tweak == 'yes' && (!isset($CURUSER) || $CURUSER['showlastcom'] == 'yes'))
+                create_tooltip_container($lastcom_tooltip, 400);
+            create_tooltip_container($torrent_tooltip, 500);
+}
 
 function torrenttable($rows, $variant = "torrent", $searchBoxId = 0) {
 	global $Cache;
@@ -3770,16 +4319,23 @@ if ($wait)
 {
 	print("<td class=\"colhead\">".$lang_functions['col_wait']."</td>\n");
 }
-if ($CURUSER['showcomnum'] != 'no') { ?>
-<td class="colhead"><a href="?<?php echo $oldlink?>sort=3&amp;type=<?php echo $link[3]?>"><img class="comments" src="pic/trans.gif" alt="comments" title="<?php echo $lang_functions['title_number_of_comments'] ?>" /></a></td>
-<?php } ?>
+//if ($CURUSER['showcomnum'] != 'no') { ?>
+<!--<td class="colhead"><a href="?--><?php //echo $oldlink?><!--sort=3&amp;type=--><?php //echo $link[3]?><!--">评论</a></td>-->
+<!--<td class="colhead"><a href="?--><?php //echo $oldlink?><!--sort=3&amp;type=--><?php //echo $link[3]?><!--"><img class="comments" src="pic/trans.gif" alt="comments" title="--><?php //echo $lang_functions['title_number_of_comments'] ?><!--" /></a></td>-->
+<?php //} ?>
 
-<td class="colhead"><a href="?<?php echo $oldlink?>sort=4&amp;type=<?php echo $link[4]?>"><img class="time" src="pic/trans.gif" alt="time" title="<?php echo ($CURUSER['timetype'] != 'timealive' ? $lang_functions['title_time_added'] : $lang_functions['title_time_alive'])?>" /></a></td>
-<td class="colhead"><a href="?<?php echo $oldlink?>sort=5&amp;type=<?php echo $link[5]?>"><img class="size" src="pic/trans.gif" alt="size" title="<?php echo $lang_functions['title_size'] ?>" /></a></td>
-<td class="colhead"><a href="?<?php echo $oldlink?>sort=7&amp;type=<?php echo $link[7]?>"><img class="seeders" src="pic/trans.gif" alt="seeders" title="<?php echo $lang_functions['title_number_of_seeders'] ?>" /></a></td>
-<td class="colhead"><a href="?<?php echo $oldlink?>sort=8&amp;type=<?php echo $link[8]?>"><img class="leechers" src="pic/trans.gif" alt="leechers" title="<?php echo $lang_functions['title_number_of_leechers'] ?>" /></a></td>
-<td class="colhead"><a href="?<?php echo $oldlink?>sort=6&amp;type=<?php echo $link[6]?>"><img class="snatched" src="pic/trans.gif" alt="snatched" title="<?php echo $lang_functions['title_number_of_snatched']?>" /></a></td>
-<td class="colhead"><a href="?<?php echo $oldlink?>sort=9&amp;type=<?php echo $link[9]?>"><?php echo $lang_functions['col_uploader']?></a></td>
+<!--<td class="colhead"><a href="?--><?php //echo $oldlink?><!--sort=4&amp;type=--><?php //echo $link[4]?><!--"><img class="time" src="pic/trans.gif" alt="time" title="--><?php //echo ($CURUSER['timetype'] != 'timealive' ? $lang_functions['title_time_added'] : $lang_functions['title_time_alive'])?><!--" /></a></td>-->
+<td class="colhead"><a href="?<?php echo $oldlink?>sort=4&amp;type=<?php echo $link[4]?>">存活</a></td>
+<!--<td class="colhead"><a href="?--><?php //echo $oldlink?><!--sort=5&amp;type=--><?php //echo $link[5]?><!--"><img class="size" src="pic/trans.gif" alt="size" title="--><?php //echo $lang_functions['title_size'] ?><!--" /></a></td>-->
+<td class="colhead"><a href="?<?php echo $oldlink?>sort=5&amp;type=<?php echo $link[5]?>">大小</a></td>
+<!--<td class="colhead"><a href="?--><?php //echo $oldlink?><!--sort=7&amp;type=--><?php //echo $link[7]?><!--"><img class="seeders" src="pic/trans.gif" alt="seeders" title="--><?php //echo $lang_functions['title_number_of_seeders'] ?><!--" /></a></td>-->
+<td class="colhead"><a href="?<?php echo $oldlink?>sort=7&amp;type=<?php echo $link[7]?>">种子</a></td>
+<!--<td class="colhead"><a href="?--><?php //echo $oldlink?><!--sort=8&amp;type=--><?php //echo $link[8]?><!--"><img class="leechers" src="pic/trans.gif" alt="leechers" title="--><?php //echo $lang_functions['title_number_of_leechers'] ?><!--" /></a></td>-->
+<td class="colhead"><a href="?<?php echo $oldlink?>sort=8&amp;type=<?php echo $link[8]?>">下载</a></td>
+<!--<td class="colhead"><a href="?--><?php //echo $oldlink?><!--sort=6&amp;type=--><?php //echo $link[6]?><!--"><img class="snatched" src="pic/trans.gif" alt="snatched" title="--><?php //echo $lang_functions['title_number_of_snatched']?><!--" /></a></td>-->
+<td class="colhead"><a href="?<?php echo $oldlink?>sort=6&amp;type=<?php echo $link[6]?>">完成</a></td>
+<!--发布者隐藏-->
+<!--<td class="colhead"><a href="?--><?php //echo $oldlink?><!--sort=9&amp;type=--><?php //echo $link[9]?><!--">--><?php //echo $lang_functions['col_uploader']?><!--</a></td>-->
 <?php
 if (user_can('torrentmanage')) { ?>
 	<td class="colhead"><?php echo $lang_functions['col_action'] ?></td>
@@ -3797,11 +4353,10 @@ else $displaysmalldescr = true;
 //while ($row = mysql_fetch_assoc($res))
 $lastcom_tooltip = [];
 $torrent_tooltip = [];
-foreach ($rows as $row)
-{
+foreach ($rows as $row) {
 	$id = $row["id"];
 	$sphighlight = get_torrent_bg_color($row['sp_state'], $row['pos_state'], $row);
-	print("<tr" . $sphighlight . ">\n");
+	print("<tr " . $sphighlight . ">\n");
 
 	print("<td class=\"rowfollow nowrap\" valign=\"middle\" style='padding: 0px'>");
 	if (isset($row["category"])) {
@@ -3893,9 +4448,18 @@ foreach ($rows as $row)
         }
         $tdCover = sprintf('<td class="embedded" style="text-align: center;width: 46px;height: 46px"><img src="pic/misc/spinner.svg" data-src="%s" class="nexus-lazy-load" style="max-height: 46px;max-width: 46px" /></td>', $coverSrc);
     }
+    // 这里改了htmlspecialchars($dispname)是种子主标题
+	print("<td class=\"rowfollow\" width=\"100%\" align=\"left\" style='padding: 0px'>
+<table class=\"torrentname\" width=\"100%\">
+<tr>
+$tdCover
+<td class=\"embedded\" style='padding-left: 5px'>".
+$stickyicon.
+"<a $short_torrent_name_alt $mouseovertorrent href=\"details.php?id=".$id."&amp;hit=1\">
+    <b>".htmlspecialchars($dispname)."</b>
+</a>");
 
-	print("<td class=\"rowfollow\" width=\"100%\" align=\"left\" style='padding: 0px'><table class=\"torrentname\" width=\"100%\"><tr" . $sphighlight . ">$tdCover<td class=\"embedded\" style='padding-left: 5px'>".$stickyicon."<a $short_torrent_name_alt $mouseovertorrent href=\"details.php?id=".$id."&amp;hit=1\"><b>".htmlspecialchars($dispname)."</b></a>");
-	$picked_torrent = "";
+    $picked_torrent = "";
 	if ($CURUSER['appendpicked'] != 'no'){
 	if($row['picktype']=="hot")
 	$picked_torrent = " <b>[<font class='hot'>".$lang_functions['text_hot']."</font>]</b>";
@@ -3928,7 +4492,6 @@ foreach ($rows as $row)
     } else {
         $tags = '';
     }
-
 	if ($displaysmalldescr){
 		//small descr
 		$dissmall_descr = trim($row["small_descr"]);
@@ -3938,8 +4501,10 @@ foreach ($rows as $row)
 		{
 			$dissmall_descr=mb_substr($dissmall_descr, 0, $max_lenght_of_small_descr-2,"UTF-8") . "..";
 		}
-		$dissmall_descr = $tags . htmlspecialchars($dissmall_descr);
-		print($dissmall_descr == "" ? "" : "<br />".$dissmall_descr);
+		$dissmall_descr = htmlspecialchars($dissmall_descr) . '<br>'.$tags;
+		print("<b>");
+        print($dissmall_descr == "" ? "" : "<br />".$dissmall_descr);
+        print("</b>");
 	} else {
 	    print($tags ? "<br />$tags" : "");
     }
@@ -3975,88 +4540,105 @@ foreach ($rows as $row)
 		print("<td class=\"rowfollow nowrap\">".$lang_functions['text_none']."</td>\n");
 	}
 
-	if ($CURUSER['showcomnum'] != 'no')
-	{
-	print("<td class=\"rowfollow\">");
-	$nl = "";
-
-	//comments
-
-	$nl = "<br />";
-	if (!$row["comments"]) {
-		print("<a href=\"comment.php?action=add&amp;pid=".$id."&amp;type=torrent\" title=\"".$lang_functions['title_add_comments']."\">" . $row["comments"] .  "</a>");
-	} else {
-		if ($enabletooltip_tweak == 'yes' && $CURUSER['showlastcom'] != 'no')
-		{
-			if (!$lastcom = $Cache->get_value('torrent_'.$id.'_last_comment_content')){
-				$res2 = sql_query("SELECT user, added, text FROM comments WHERE torrent = $id ORDER BY id DESC LIMIT 1");
-				$lastcom = mysql_fetch_array($res2);
-				$Cache->cache_value('torrent_'.$id.'_last_comment_content', $lastcom, 1855);
-			}
-			$timestamp = strtotime($lastcom["added"]);
-			$hasnewcom = ($lastcom['user'] != $CURUSER['id'] && $timestamp >= $last_browse);
-			if ($lastcom)
-			{
-				if ($CURUSER['timetype'] != 'timealive')
-					$lastcomtime = $lang_functions['text_at_time'].$lastcom['added'];
-				else
-					$lastcomtime = $lang_functions['text_blank'].gettime($lastcom["added"],true,false,true);
-					$lastcom_tooltip[$counter]['id'] = "lastcom_" . $counter;
-					$lastcom_tooltip[$counter]['content'] = ($hasnewcom ? "<b>(<font class='new'>".$lang_functions['text_new_uppercase']."</font>)</b> " : "").$lang_functions['text_last_commented_by'].get_username($lastcom['user']) . $lastcomtime."<br />". format_comment(mb_substr($lastcom['text'],0,100,"UTF-8") . (mb_strlen($lastcom['text'],"UTF-8") > 100 ? " ......" : "" ),true,false,false,true,600,false,false);
-					$onmouseover = "onmouseover=\"domTT_activate(this, event, 'content', document.getElementById('" . $lastcom_tooltip[$counter]['id'] . "'), 'trail', false, 'delay', 500,'lifetime',3000,'fade','both','styleClass','niceTitle','fadeMax', 87,'maxWidth', 400);\"";
-			}
-		} else {
-			$hasnewcom = false;
-			$onmouseover = "";
-		}
-		print("<b><a href=\"details.php?id=".$id."&amp;hit=1&amp;cmtpage=1#startcomments\" ".$onmouseover.">". ($hasnewcom ? "<font class='new'>" : ""). $row["comments"] .($hasnewcom ? "</font>" : ""). "</a></b>");
-	}
-
-	print("</td>");
-	}
+//	if ($CURUSER['showcomnum'] != 'no')
+//	{
+//	print("<td class=\"rowfollow\">");
+//	$nl = "";
+//
+//	//comments
+//
+//	$nl = "<br />";
+//	if (!$row["comments"]) {
+//		print("<a href=\"comment.php?action=add&amp;pid=".$id."&amp;type=torrent\" title=\"".$lang_functions['title_add_comments']."\"><b class='torrents_b'>" . $row["comments"] .  "</b></a>");
+//	} else {
+//		if ($enabletooltip_tweak == 'yes' && $CURUSER['showlastcom'] != 'no')
+//		{
+//			if (!$lastcom = $Cache->get_value('torrent_'.$id.'_last_comment_content')){
+//				$res2 = sql_query("SELECT user, added, text FROM comments WHERE torrent = $id ORDER BY id DESC LIMIT 1");
+//				$lastcom = mysql_fetch_array($res2);
+//				$Cache->cache_value('torrent_'.$id.'_last_comment_content', $lastcom, 1855);
+//			}
+//			$timestamp = strtotime($lastcom["added"]);
+//			$hasnewcom = ($lastcom['user'] != $CURUSER['id'] && $timestamp >= $last_browse);
+//			if ($lastcom)
+//			{
+//				if ($CURUSER['timetype'] != 'timealive')
+//					$lastcomtime = $lang_functions['text_at_time'].$lastcom['added'];
+//				else
+//					$lastcomtime = $lang_functions['text_blank'].gettime($lastcom["added"],true,false,true);
+//					$lastcom_tooltip[$counter]['id'] = "lastcom_" . $counter;
+//					$lastcom_tooltip[$counter]['content'] = ($hasnewcom ? "<b>(<font class='new'>".$lang_functions['text_new_uppercase']."</font>)</b> " : "").$lang_functions['text_last_commented_by'].get_username($lastcom['user']) . $lastcomtime."<br />". format_comment(mb_substr($lastcom['text'],0,100,"UTF-8") . (mb_strlen($lastcom['text'],"UTF-8") > 100 ? " ......" : "" ),true,false,false,true,600,false,false);
+//					$onmouseover = "onmouseover=\"domTT_activate(this, event, 'content', document.getElementById('" . $lastcom_tooltip[$counter]['id'] . "'), 'trail', false, 'delay', 500,'lifetime',3000,'fade','both','styleClass','niceTitle','fadeMax', 87,'maxWidth', 400);\"";
+//			}
+//		} else {
+//			$hasnewcom = false;
+//			$onmouseover = "";
+//		}
+//		print("<a href=\"details.php?id=".$id."&amp;hit=1&amp;cmtpage=1#startcomments\" ".$onmouseover."><b class='torrents_b'>". ($hasnewcom ? "<font class='new'>" : ""). $row["comments"] .($hasnewcom ? "</font>" : ""). "</b></a>");
+//	}
+//
+//	print("</td>");
+//	}
 
 	$time = $row["added"];
 	$time = gettime($time,false,true);
-	print("<td class=\"rowfollow nowrap\">". $time. "</td>");
+    //###########
+    //##存活时间##
+    //###########
+	print("<td class=\"rowfollow nowrap\" ><b class='torrents_b'>". $time. "</b></td>");
 
-	//size
-	print("<td class=\"rowfollow\">" . mksize_compact($row["size"])."</td>");
+    //###########
+    //##文件大小##
+    //###########
+	print("<td class=\"rowfollow\" ><b class='torrents_b'>" . mksize_compact($row["size"])."</b></td>");
 
-	if ($row["seeders"]) {
+    //###########
+    //##做种人数##
+    //###########
+//	if ($row["seeders"]) {
 			$ratio = ($row["leechers"] ? ($row["seeders"] / $row["leechers"]) : 1);
 			$ratiocolor = get_slr_color($ratio);
-			print("<td class=\"rowfollow\" align=\"center\"><b><a href=\"details.php?id=".$id."&amp;hit=1&amp;dllist=1#seeders\">".($ratiocolor ? "<font color=\"" .
+			print("<td class=\"rowfollow\" align=\"center\"><b class='torrents_b'><a href=\"details.php?id=".$id."&amp;hit=1&amp;dllist=1#seeders\">".($ratiocolor ? "<font color=\"" .
 			$ratiocolor . "\">" . number_format($row["seeders"]) . "</font>" : number_format($row["seeders"]))."</a></b></td>\n");
-	}
-	else
-		print("<td class=\"rowfollow\"><span class=\"" . linkcolor($row["seeders"]) . "\">" . number_format($row["seeders"]) . "</span></td>\n");
+//	}
+//	else
+//		print("<td class=\"rowfollow\"><span class=\"" . linkcolor($row["seeders"]) . "\">" . number_format($row["seeders"]) . "</span></td>\n");
 
-	if ($row["leechers"]) {
-		print("<td class=\"rowfollow\"><b><a href=\"details.php?id=".$id."&amp;hit=1&amp;dllist=1#leechers\">" .
+    //###########
+    //##下载人数##
+    //###########
+//	if ($row["leechers"]) {
+		print("<td class=\"rowfollow\"><b class='torrents_b'><a href=\"details.php?id=".$id."&amp;hit=1&amp;dllist=1#leechers\">" .
 		number_format($row["leechers"]) . "</a></b></td>\n");
-	}
-	else
-		print("<td class=\"rowfollow\">0</td>\n");
+//	}
+//	else
+//		print("<td class=\"rowfollow\">0</td>\n");
 
-	if ($row["times_completed"] >=1)
-	print("<td class=\"rowfollow\"><a href=\"viewsnatches.php?id=".$row['id']."\"><b>" . number_format($row["times_completed"]) . "</b></a></td>\n");
-	else
-	print("<td class=\"rowfollow\">" . number_format($row["times_completed"]) . "</td>\n");
+    //###########
+    //##完成人数##
+    //###########
+//	if ($row["times_completed"] >=1)
+	print("<td class=\"rowfollow\"><b class='torrents_b'><a href=\"viewsnatches.php?id=".$row['id']."\">" . number_format($row["times_completed"]) . "</a></b></td>\n");
+//	else
+//	print("<td class=\"rowfollow\">" . number_format($row["times_completed"]) . "</td>\n");
 
-		if (
-		    $row["anonymous"] == "yes"
-            && (user_can('viewanonymous') || (isset($row['owner']) && $row['owner'] == $CURUSER['id']))
-        ) {
-			print("<td class=\"rowfollow\" align=\"center\"><i>".$lang_functions['text_anonymous']."</i><br />".(isset($row["owner"]) ? "(" . get_username($row["owner"]) .")" : "<i>".$lang_functions['text_orphaned']."</i>") . "</td>\n");
-		}
-		elseif ($row["anonymous"] == "yes")
-		{
-			print("<td class=\"rowfollow\"><i>".$lang_functions['text_anonymous']."</i></td>\n");
-		}
-		else
-		{
-			print("<td class=\"rowfollow\">" . (isset($row["owner"]) ? get_username($row["owner"]) : "<i>".$lang_functions['text_orphaned']."</i>") . "</td>\n");
-		}
+    //###########
+    //##发布者####
+    //###########
+//		if (
+//		    $row["anonymous"] == "yes"
+//            && (user_can('viewanonymous') || (isset($row['owner']) && $row['owner'] == $CURUSER['id']))
+//        ) {
+//			print("<td class=\"rowfollow\" align=\"center\"><i>".$lang_functions['text_anonymous']."</i><br />".(isset($row["owner"]) ? "(" . get_username($row["owner"]) .")" : "<i>".$lang_functions['text_orphaned']."</i>") . "</td>\n");
+//		}
+//		elseif ($row["anonymous"] == "yes")
+//		{
+//			print("<td class=\"rowfollow\"><i>".$lang_functions['text_anonymous']."</i></td>\n");
+//		}
+//		else
+//		{
+//			print("<td class=\"rowfollow\">" . (isset($row["owner"]) ? get_username($row["owner"]) : "<i>".$lang_functions['text_orphaned']."</i>") . "</td>\n");
+//		}
 
 	if (user_can('torrentmanage'))
 	{
@@ -4074,9 +4656,9 @@ if($enabletooltip_tweak == 'yes' && (!isset($CURUSER) || $CURUSER['showlastcom']
 create_tooltip_container($lastcom_tooltip, 400);
 create_tooltip_container($torrent_tooltip, 500);
 }
-// 获取用户等级
-function custom_get_user_lv_class_name($id)
-{
+
+// 获取用户等级样式类名
+function custom_get_user_lv_class_name($id){
     $htmlUserName = get_username($id,false,true,false,false,false,false,"",false);
     if (strpos($htmlUserName, "_Name" ) !== false) {
         preg_match_all("/class='([^']+)'/", $htmlUserName, $matches);
@@ -4086,34 +4668,113 @@ function custom_get_user_lv_class_name($id)
     }
 }
 
+// 获取用户等级
 function custom_get_user_lv($id) {
     $ucIndex = get_user_row($id)['class'];
     $nameArray = [
-        "PEASANT",
-        "USER",
-        "POWER_USER",
-        "ELITE_USER",
-        "CRAZY_USER",
-        "INSANE_USER",
-        "VETERAN_USER",
-        "EXTREME_USER",
-        "ULTIMATE_USER",
-        "NEXUS_MASTER",
-        "VIP",
-        "RETIREE",
-        "UPLOADER",
-        "MODERATOR",
-        "ADMINISTRATOR",
-        "SYSOP",
-        "STAFFLEADER",
+        "懒象",// "PEASANT"
+        "小象",// "USER"
+        "青铜印度象",// "POWER_USER"
+        "白银非洲象",// "ELITE_USER"
+        "黄金刚果象",// "CRAZY_USER"
+        "铂金非洲象",// "INSANE_USER"
+        "翡翠非洲森林象",// "VETERAN_USER"
+        "钻石爪哇象",// "EXTREME_USER"
+        "大师亚洲象",// "ULTIMATE_USER"
+        "王者云南亚洲象",// "NEXUS_MASTER"
+        "贵宾",// "VIP"
+        "养老组",// "RETIREE"
+        "发布员",// "UPLOADER"
+        "总版主",// "MODERATOR"
+        "管理员",// "ADMINISTRATOR"
+        "维护开发员",// "SYSOP"
+        "岛主",// "STAFFLEADER"
     ];
     return $nameArray[$ucIndex];
 }
-function custom_get_user_name($id) {
-    $htmlUserName = get_username($id,false,true,true,true,false,false,"",false);
+
+// 获取用户徽章
+function custom_get_user_class_medal($class) {
+    $classMedalUrl = [
+        'https://img.ptvicomo.net/pic/2024/01/25/65b228e705684.png', //"PEASANT",
+        'https://img.ptvicomo.net/pic/2024/01/25/65b228e705684.png', //"USER",
+        'https://img.ptvicomo.net/pic/2024/01/25/65b228e705684.png', //"POWER_USER",
+        'https://img.ptvicomo.net/pic/2024/01/25/65b228e705684.png', //"ELITE_USER",
+        'https://img.ptvicomo.net/pic/2024/01/25/65b228e705684.png', //"CRAZY_USER",
+        'https://img.ptvicomo.net/pic/2024/01/25/65b228e705684.png', //"INSANE_USER",
+        'https://img.ptvicomo.net/pic/2024/01/25/65b228e705684.png', //"VETERAN_USER",
+        'https://img.ptvicomo.net/pic/2024/01/25/65b228e705684.png', //"EXTREME_USER",
+        'https://img.ptvicomo.net/pic/2024/01/25/65b228e705684.png', //"ULTIMATE_USER",
+        'https://img.ptvicomo.net/pic/2024/01/25/65b228e705684.png', //"NEXUS_MASTER",
+        'https://img.ptvicomo.net/pic/2024/01/19/65a9d4ab64915.png', //"VIP",
+        'https://img.ptvicomo.net/pic/2024/01/25/65b228e76fc9f.png', //"RETIREE",
+        'https://img.ptvicomo.net/pic/2024/01/25/65b228e76fc9f.png', //"UPLOADER",
+        'https://img.ptvicomo.net/pic/2024/01/25/65b228e76fc9f.png', //"MODERATOR",
+        'https://img.ptvicomo.net/pic/2024/01/25/65b228e6f3f9d.png', //"ADMINISTRATOR",
+        'https://img.ptvicomo.net/pic/2024/01/25/65b228e6f3f9d.png', //"SYSOP",
+        'https://img.ptvicomo.net/pic/2024/01/25/65b228e6ea83b.png', //"STAFFLEADER",
+    ];
+    return $classMedalUrl[$class];
+}
+
+// 获取用户头像
+function custom_get_user_avatar($userAvatar, $userClass, $withFrame=true, $width=60, $height=60, $padding=0) {
+    if (!$withFrame) {
+        return "<img style='object-fit: cover; padding:".$padding."px; width: ".$width."px;height:".$height."px;border-radius:999px' src='".
+            (!empty($userAvatar) ? $userAvatar : "https://img.ptvicomo.net/pic/2024/01/11/659fef9fd1cf4.webp")
+            ."' alt='头像'>";
+    }
+    $class = $userClass;
+    $vlToFrameUrl = [
+        'https://pic.ziyuan.wang/user/guest/2023/12/_edit_731749434807093_ec2249e02f734.jpg', //"PEASANT"
+        'https://pic.ziyuan.wang/user/guest/2023/12/_edit_731749434807093_ec2249e02f734.jpg', //"USER"
+        'https://img.ptvicomo.net/pic/2024/01/27/65b46628e3376.png', //"POWER_USER"
+        'https://img.ptvicomo.net/pic/2024/01/27/65b4576b52e0e.png', //"ELITE_USER"
+        'https://img.ptvicomo.net/pic/2024/01/27/65b49305085f8.png', //"CRAZY_USER"
+        'https://img.ptvicomo.net/pic/2024/01/27/65b495c0ad7ac.png', //"INSANE_USER"
+        'https://img.ptvicomo.net/pic/2024/01/27/65b481f92de11.png', //"VETERAN_USER"
+        'https://img.ptvicomo.net/pic/2024/01/27/65b495c300600.png', //"EXTREME_USER"
+        'https://img.ptvicomo.net/pic/2024/01/27/65b495c1f1fd8.png', //"ULTIMATE_USER"
+        'https://img.ptvicomo.net/pic/2024/01/27/65b495c198705.png', //"NEXUS_MASTER"
+        'https://img.ptvicomo.net/pic/2024/01/27/65b4576ba55b0.png', //"VIP"
+        'https://img.ptvicomo.net/pic/2024/01/27/65b4576b7dece.png', //"RETIREE"
+        'https://img.ptvicomo.net/pic/2024/01/27/65b4576b7dece.png', //"UPLOADER"
+        'https://img.ptvicomo.net/pic/2024/01/27/65b4576b7dece.png', //"MODERATOR"
+        'https://img.ptvicomo.net/pic/2024/01/27/65b485eb31f08.png', //"ADMINISTRATOR"
+        'https://img.ptvicomo.net/pic/2024/01/27/65b485eb31f08.png', //"SYSOP"
+        'https://img.ptvicomo.net/pic/2024/01/27/65b485eb31f08.png', //"STAFFLEADER"
+    ];
+    $avatarUrl = (!empty($userAvatar) ? $userAvatar : "https://img.ptvicomo.net/pic/2024/01/11/659fef9fd1cf4.webp");
+    // 三色彩框 https://pic.ziyuan.wang/user/guest/2023/12/_edit_731749434807093_ec2249e02f734.jpg
+    // 彩框2   https://img.ptvicomo.net/pic/2024/01/23/65af6d2bcf502.png
+    // 金色    https://img.ptvicomo.net/pic/2024/01/23/65af713ee387c.png
+    // 红蓝    https://p0.itc.cn/q_70/images03/20210101/3d4e0963acf4444d8494d228c58a0d05.jpeg
+    // 蓝绿    https://img1.baidu.com/it/u=2177944673,180315128&fm=253&fmt=auto&app=138&f=JPEG?w=889&h=500
+//    $avatar = "
+//<div style='padding: ".$padding."px;'>
+//<div style='padding: ".($width*0.04)."px; width:".($width*0.92)."px; height:".($height*0.92)."px; border-radius: 1000px;
+//background-image: url(\"".$vlToFrameUrl[$class]."\");background-size: 100% 100%;'>
+//    <img style='width: 100%; height: 100%; object-fit: cover; border-radius: 1000px;' src='".$avatarUrl."' alt=''>
+//</div></div>
+//";
+    $avatar = '
+<div style="padding: '.$padding.'px; width:'.$width.'px; height:'.$height.'px;">
+    <div style="position: relative; width:'.$width.'px; height:'.$height.'px;">
+        <div style="transform: scale(0.81); width:'.$width.'px; height:'.$height.'px;border-radius: 1000px;background-size: cover; background-position:center;background-image: url(\''.$avatarUrl.'\');"></div>
+        <div style="transform: scale(1.4);position: absolute; top:0;left:0;width:'.$width.'px; height:'.$height.'px;background-size: 100% 100%;background-image: url(\''.$vlToFrameUrl[$class].'\');"></div>
+    </div>
+</div>
+';
+    return $avatar;
+}
+
+// 获取用户名整体(参数简化只需id)
+function custom_get_user_name($id, $medal = true) {
+    $htmlUserName = get_username($id,false,true,true,true,false,false,"",false, $medal);
     return $htmlUserName;
 }
-function get_username($id, $big = false, $link = true, $bold = true, $target = false, $bracket = false, $withtitle = false, $link_ext = "", $underline = false)
+
+function get_username($id, $big = false, $link = true, $bold = true, $target = false, $bracket = false, $withtitle = false, $link_ext = "", $underline = false, $medal = true)
 {
 	static $usernameArray = array();
 	$id = (int)$id;
@@ -4176,11 +4837,20 @@ function get_username($id, $big = false, $link = true, $bold = true, $target = f
 
         //medal
         $medalHtml = '';
-		foreach ($arr['wearing_medals'] ?? [] as $medal) {
-            $medalHtml .= sprintf(
-                '<img src="%s" title="%s" class="%s preview" style="max-height: %s;max-width: %s;margin-left: %s"/>',
-                $medal['image_large'], $medal['name'], $medalClass, $medalSize, $medalSize, $marginLeft
-            );
+        if ($medal) {
+            foreach ($arr['wearing_medals'] ?? [] as $medal) {
+                $medalHtml .= sprintf(
+                    '<img src="%s" title="%s" class="%s preview" style="max-height: %s;max-width: %s;margin-left: %s"/>',
+                    $medal['image_large'], $medal['name'], $medalClass, $medalSize, $medalSize, $marginLeft
+                );
+            }
+            $classMedalUrl = custom_get_user_class_medal($arr['class']);
+            if (!empty($classMedalUrl)) {
+                // 加上管理组的等级特殊徽章
+                $medalHtml .= sprintf(
+                    '<img src="'.$classMedalUrl.'" title="" class="user_class_medal-preview" 
+                        style="max-height: 11px;max-width: 30px; object-fit: contain;margin-left: 2px"/>');
+            }
         }
 
 		$href = getSchemeAndHttpHost() . "/userdetails.php?id=$id";
@@ -5514,11 +6184,25 @@ function valid_class_name($filename)
 	return true;
 }
 
-function return_avatar_image($url)
+function return_avatar_image($url, $userClass = 1)
 {
 	global $CURLANGDIR;
-	return "<img src=\"".$url."\" alt=\"avatar\" width=\"150px\" onload=\"check_avatar(this, '".$CURLANGDIR."');\" />";
+    //#################################################
+    //############### 论坛头像修改  #####################
+    //#################################################
+//	return "<img src=\"".$url."\" style='width: 100px' alt=\"avatar\" onload=\"check_avatar(this, '".$CURLANGDIR."');\" />";
+    return custom_get_user_avatar($url, $userClass, true, 100, 100, 0);
+//	return "<img src=\"".$url."\" style=\"
+//	width: 100px;
+//	height: 100px;
+//	object-fit: cover;
+//	border-radius: 100px;
+//	background-size:100% 100%;
+//	background-image: url('https://pic.ziyuan.wang/user/guest/2023/12/_edit_731749434807093_ec2249e02f734.jpg');
+//	padding: 3px;
+//	\" alt=\"avatar\" />";
 }
+
 function return_category_image($categoryid, $link="")
 {
 	static $catImg = array();
@@ -6410,6 +7094,7 @@ function calculate_harem_addition($uid)
 function build_search_box_category_table($mode, $checkboxValue, $categoryHrefPrefix, $taxonomyHrefPrefix, $taxonomyNameLength, $checkedValues = '', array $options = [])
 {
     parse_str($checkedValues, $checkedValuesArr);
+//    throw new \App\Exceptions\NexusException("xyx".$mode);
     $searchBox = \App\Models\SearchBox::query()->with(['categories', 'categories.icon'])->findOrFail($mode);
     $lang = get_langfolder_cookie();
     $withTaxonomies = [];
@@ -6786,5 +7471,6 @@ function can_view_post($uid, $post)
     do_log("$log, TRUE");
     return true;
 }
+
 
 ?>

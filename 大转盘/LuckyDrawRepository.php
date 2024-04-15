@@ -189,7 +189,7 @@ class LuckyDrawRepository extends BasePlugin
                     break;
                 }
                 // 每月1日0点刷新数据
-                $firstDayZero = new DateTime('first day of this month');
+                $firstDayZero = new DateTime('this week Monday');
                 $firstDayZero->setTime(0, 0, 0);
                 if (new DateTime($numDO->update_at) < $firstDayZero) {
                     $updateMonthDO = [
